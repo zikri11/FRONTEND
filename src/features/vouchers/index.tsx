@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/reui/badge'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -355,7 +355,6 @@ export function Vouchers() {
                   />
                 </TableHead>
                 <TableHead>Kode</TableHead>
-                <TableHead>Password</TableHead>
                 <TableHead>Paket</TableHead>
                 <TableHead>Outlet</TableHead>
                 <TableHead>Status</TableHead>
@@ -366,13 +365,13 @@ export function Vouchers() {
             <TableBody>
               {isPending ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                     Memuat data voucher...
                   </TableCell>
                 </TableRow>
               ) : isError ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">
+                  <TableCell colSpan={7} className="text-center py-6">
                     <p className="text-muted-foreground">Gagal mengambil data voucher.</p>
                     <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
                       Coba Lagi
@@ -381,7 +380,7 @@ export function Vouchers() {
                 </TableRow>
               ) : paginatedVouchers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                     {search || profileFilter !== 'all' ? 'Tidak ada voucher yang cocok.' : 'Belum ada voucher.'}
                   </TableCell>
                 </TableRow>
@@ -400,21 +399,30 @@ export function Vouchers() {
                         }
                       />
                     </TableCell>
-                    <TableCell className='font-medium'>{row.username || row.kode}</TableCell>
-                    <TableCell className='text-muted-foreground'>{row.password}</TableCell>
+                    <TableCell>
+                      <div className='flex items-center gap-3'>
+                        <div className='bg-muted rounded-sm flex size-9 shrink-0 items-center justify-center'>
+                          <TicketIcon className='text-muted-foreground size-4' aria-hidden='true' />
+                        </div>
+                        <div className='flex flex-col'>
+                          <span className='text-sm font-medium'>{row.username || row.kode}</span>
+                          <span className='text-muted-foreground font-mono text-xs'>{row.password}</span>
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell>{row.profile?.name || row.paket || '-'}</TableCell>
                     <TableCell>{row.outletName || row.outlet || '-'}</TableCell>
                     <TableCell>
                       {row.status === "UNUSED" || row.status === "Aktif" ? (
-                        <Badge variant='outline' className='text-green-500 border-green-500/20 bg-green-500/10 font-normal'>
+                        <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
                           Aktif
                         </Badge>
                       ) : row.status === "USED" || row.status === "Terpakai" ? (
-                        <Badge variant='outline' className='text-muted-foreground font-normal'>
+                        <Badge size='sm' variant='secondary' className='text-muted-foreground'>
                           Terpakai
                         </Badge>
                       ) : (
-                        <Badge variant='outline' className='text-red-500 border-red-500/20 bg-red-500/10 font-normal'>
+                        <Badge size='sm' className='border-red-500/20 bg-red-500/10 text-red-500'>
                           {row.status}
                         </Badge>
                       )}

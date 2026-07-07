@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MoreHorizontalIcon, Copy, Check, TriangleAlert } from 'lucide-react'
+import { MoreHorizontalIcon, Copy, Check, TriangleAlert, KeyRound } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/reui/badge'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -196,7 +196,6 @@ export function Keys() {
                 <TableHeader className='bg-muted/50'>
                   <TableRow>
                     <TableHead>Nama Outlet</TableHead>
-                    <TableHead>API Key</TableHead>
                     <TableHead>Server</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Dibuat</TableHead>
@@ -207,13 +206,13 @@ export function Keys() {
                 <TableBody>
                   {isPending ? (
                     <TableRow>
-                      <TableCell colSpan={7} className='text-center py-6 text-muted-foreground'>
+                      <TableCell colSpan={6} className='text-center py-6 text-muted-foreground'>
                         Memuat API key...
                       </TableCell>
                     </TableRow>
                   ) : isError ? (
                     <TableRow>
-                      <TableCell colSpan={7} className='text-center py-6'>
+                      <TableCell colSpan={6} className='text-center py-6'>
                         <p className='text-muted-foreground'>Gagal memuat API key.</p>
                         <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
                           Coba Lagi
@@ -222,27 +221,32 @@ export function Keys() {
                     </TableRow>
                   ) : keys.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className='text-center py-6 text-muted-foreground'>
+                      <TableCell colSpan={6} className='text-center py-6 text-muted-foreground'>
                         Belum ada API key untuk router ini.
                       </TableCell>
                     </TableRow>
                   ) : (
                     keys.map((key) => (
                       <TableRow key={key.id}>
-                        <TableCell className='font-medium'>{key.label}</TableCell>
                         <TableCell>
-                          <code className='rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm text-muted-foreground'>
-                            {key.maskedKey}
-                          </code>
+                          <div className='flex items-center gap-3'>
+                            <div className='bg-muted rounded-sm flex size-9 shrink-0 items-center justify-center'>
+                              <KeyRound className='text-muted-foreground size-4' aria-hidden='true' />
+                            </div>
+                            <div className='flex flex-col'>
+                              <span className='text-sm font-medium'>{key.label}</span>
+                              <span className='text-muted-foreground font-mono text-xs'>{key.maskedKey}</span>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className='text-muted-foreground'>{key.serverName || '-'}</TableCell>
                         <TableCell>
                           {key.isActive ? (
-                            <Badge variant='outline' className='text-green-500 border-green-500/20 bg-green-500/10 font-normal'>
+                            <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
                               Aktif
                             </Badge>
                           ) : (
-                            <Badge variant='outline' className='text-muted-foreground font-normal'>
+                            <Badge size='sm' variant='secondary' className='text-muted-foreground'>
                               Nonaktif
                             </Badge>
                           )}

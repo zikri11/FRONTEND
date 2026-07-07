@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, Download, Users, Tag, MoreHorizontalIcon, RefreshCw } from 'lucide-react'
+import { Upload, Download, Users, Tag, MoreHorizontalIcon, RefreshCw, Gauge } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/reui/badge'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -186,16 +186,28 @@ export function Profiles() {
                   return (
                     <TableRow key={profile.id}>
                       <TableCell>
-                        <div className='font-medium'>{profile.name}</div>
-                        <div className='text-xs text-muted-foreground mt-1'>
-                          {profile.description || 'Diimpor otomatis dari router MikroTik'}
+                        <div className='flex items-center gap-3'>
+                          <div className='bg-muted rounded-sm flex size-9 shrink-0 items-center justify-center'>
+                            <Gauge className='text-muted-foreground size-4' aria-hidden='true' />
+                          </div>
+                          <div className='flex flex-col'>
+                            <span className='text-sm font-medium'>{profile.name}</span>
+                            <span className='text-muted-foreground text-xs'>
+                              {profile.description || 'Diimpor otomatis dari router MikroTik'}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant='outline' className={`flex w-fit items-center font-normal rounded-full px-2.5 py-0.5 border-muted/50 whitespace-nowrap bg-background ${profile.syncedToRouter ? 'text-muted-foreground' : 'text-amber-500'}`}>
-                          <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${profile.syncedToRouter ? 'bg-green-500' : 'bg-amber-500'}`} />
-                          {profile.syncedToRouter ? 'Sinkron' : 'Belum Sinkron'}
-                        </Badge>
+                        {profile.syncedToRouter ? (
+                          <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
+                            Sinkron
+                          </Badge>
+                        ) : (
+                          <Badge size='sm' className='border-amber-500/20 bg-amber-500/10 text-amber-500'>
+                            Belum Sinkron
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className='flex items-center gap-2 text-sm font-semibold'>

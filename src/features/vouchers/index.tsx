@@ -1,0 +1,556 @@
+import * as React from 'react'
+import { MoreHorizontalIcon, TicketIcon, CheckCircleIcon, XCircleIcon, SearchIcon, RefreshCw, Trash2Icon, PrinterIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PieChart, Pie, ResponsiveContainer, Tooltip as RechartsTooltip, Cell } from 'recharts'
+import { TrendingUp } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Link } from '@tanstack/react-router'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { ConfigDrawer } from '@/components/config-drawer'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+
+import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
+import { useServerStore } from '@/stores/server-store'
+import { api } from '@/lib/axios'
+import { toast } from 'sonner'
+
+const vouchersData = [
+  {
+    id: "1",
+    kode: "VCH-A8X9",
+    password: "983421",
+    paket: "1ORANG",
+    outlet: "KANTOR EG1",
+    status: "Aktif",
+    dibuat: "29 Jun 2026",
+  },
+  {
+    id: "2",
+    kode: "VCH-B7F2",
+    password: "124987",
+    paket: "default",
+    outlet: "LYF",
+    status: "Terpakai",
+    dibuat: "28 Jun 2026",
+  },
+]
+
+const pieData = [
+  { name: "Belum Dipakai", value: 842, fill: "var(--color-indigo-500)" },
+  { name: "Terpakai", value: 406, fill: "var(--color-slate-500)" },
+]
+
+export function Vouchers() {
+  const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
+  const { activeServerId, isLoading } = useServerStore()
+  const [vouchers, setVouchers] = React.useState<any[]>([])
+  const [isFetching, setIsFetching] = React.useState(false)
+  const [isSyncing, setIsSyncing] = React.useState(false)
+
+  // Pagination & Action States
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
+  const [voucherToDelete, setVoucherToDelete] = React.useState<string | null>(null)
+  const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false)
+
+  // Dynamic calculations
+  const totalVouchers = vouchers.length
+  const usedVouchers = vouchers.filter(v => v.status === 'USED' || v.status === 'Terpakai').length
+  const unusedVouchers = totalVouchers - usedVouchers
+
+  const dynamicPieData = [
+    { name: "Belum Dipakai", value: unusedVouchers, fill: "hsl(var(--primary))" },
+    { name: "Terpakai", value: usedVouchers, fill: "hsl(var(--muted-foreground))" },
+  ]
+
+  const totalPages = Math.ceil(totalVouchers / pageSize)
+  const paginatedVouchers = vouchers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [vouchers.length, pageSize])
+
+  const fetchVouchers = React.useCallback(async () => {
+    if (!activeServerId) return
+    setIsFetching(true)
+    try {
+      const res = await api.get(`/vouchers`, { params: { serverId: activeServerId } })
+      setVouchers(res.data)
+    } catch (error) {
+      toast.error('Gagal mengambil data voucher')
+    } finally {
+      setIsFetching(false)
+    }
+  }, [activeServerId])
+
+  React.useEffect(() => {
+    fetchVouchers()
+  }, [fetchVouchers])
+
+  const selectAll = selectedRows.size === vouchers.length && vouchers.length > 0
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(new Set(vouchers.map((row) => row.id)))
+    } else {
+      setSelectedRows(new Set())
+    }
+  }
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedRows)
+    if (checked) {
+      newSelected.add(id)
+    } else {
+      newSelected.delete(id)
+    }
+    setSelectedRows(newSelected)
+  }
+
+  const handleSync = async () => {
+    if (!activeServerId) return
+    setIsSyncing(true)
+    toast.info('Memulai sinkronisasi...')
+    try {
+      await api.post(`/profiles/sync/${activeServerId}`)
+      toast.success('Data voucher & profil berhasil disinkronkan dari router!')
+      fetchVouchers()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal mensinkronkan data.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleDeleteConfirm = async (idOrIds: string | string[]) => {
+    try {
+      const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds]
+      // Use delete-bulk endpoint for both single and multiple
+      await api.post(`/vouchers/delete-bulk`, { ids })
+      toast.success(`${ids.length} Voucher berhasil dihapus`)
+      setSelectedRows(new Set())
+      fetchVouchers()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal menghapus voucher')
+    }
+  }
+
+  const handlePrintSingle = (id: string) => {
+    const baseUrl = api.defaults.baseURL || 'http://localhost:3000/api'
+    window.open(`${baseUrl}/vouchers/pdf/single/${id}`, '_blank')
+  }
+
+  return (
+    <>
+      <Header fixed>
+        <Search className='me-auto' />
+        <ThemeSwitch />
+        <ConfigDrawer />
+        <ProfileDropdown />
+      </Header>
+
+      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+        {!isLoading && !activeServerId ? (
+          <EmptyRouterPlaceholder />
+        ) : (
+          <>
+            <div className='flex flex-wrap items-start justify-between gap-2'>
+              <div>
+                <h2 className='text-2xl font-bold tracking-tight'>Voucher Hotspot</h2>
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Buat voucher instan & massal di KANTOR EG1.
+                </p>
+              </div>
+              <div className='flex gap-2 items-center'>
+                <Button variant='outline' onClick={handleSync} disabled={isSyncing}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
+                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button>Buat Voucher</Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-64 p-2">
+                    <div className="grid gap-1">
+                      <Button
+                        variant="ghost"
+                        className="h-auto w-full justify-start flex-col items-start gap-1.5 p-2.5 font-normal"
+                        asChild
+                      >
+                        <Link to="/vouchers/add-single">
+                          <span className="text-sm font-medium leading-none">Tunggal</span>
+                          <span className="text-xs text-muted-foreground text-left whitespace-normal">
+                            Buat voucher satuan secara manual.
+                          </span>
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="h-auto w-full justify-start flex-col items-start gap-1.5 p-2.5 font-normal"
+                        asChild
+                      >
+                        <Link to="/vouchers/add-bulk">
+                          <span className="text-sm font-medium leading-none">Masal</span>
+                          <span className="text-xs text-muted-foreground text-left whitespace-normal">
+                            Generate banyak voucher otomatis.
+                          </span>
+                        </Link>
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+        <Tabs defaultValue="list" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="list">List View</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics View</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="space-y-4">
+            {/* Info Cards */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Voucher
+              </CardTitle>
+              <TicketIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalVouchers}</div>
+              <p className="text-xs text-muted-foreground">
+                Total di router ini
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Belum Dipakai
+              </CardTitle>
+              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{unusedVouchers}</div>
+              <p className="text-xs text-muted-foreground">
+                {totalVouchers > 0 ? Math.round((unusedVouchers/totalVouchers)*100) : 0}% dari total voucher
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Terpakai
+              </CardTitle>
+              <XCircleIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{usedVouchers}</div>
+              <p className="text-xs text-muted-foreground">
+                {totalVouchers > 0 ? Math.round((usedVouchers/totalVouchers)*100) : 0}% dari total voucher
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Toolbar: Search & Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Cari kode atau username..."
+              className="pl-8 w-full"
+            />
+          </div>
+          <div className="w-full sm:w-[200px]">
+            <Select defaultValue="all">
+              <SelectTrigger>
+                <SelectValue placeholder="Filter Profil" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Profil</SelectItem>
+                <SelectItem value="1orang">1 Orang (1 Mbps)</SelectItem>
+                <SelectItem value="vip">VIP (5 Mbps)</SelectItem>
+                <SelectItem value="1hari">1 Hari Unlimited</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {selectedRows.size > 0 && (
+          <div className="flex items-center gap-4 p-2 bg-destructive/10 text-destructive rounded-md border border-destructive/20 mb-2">
+            <span className="text-sm font-medium px-2">{selectedRows.size} voucher dipilih</span>
+            <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteAlertOpen(true)}>
+              <Trash2Icon className="mr-2 h-4 w-4" />
+              Hapus Massal
+            </Button>
+          </div>
+        )}
+
+        <div className='rounded-md border bg-background'>
+          <Table>
+            <TableHeader className='bg-muted/50'>
+              <TableRow>
+                <TableHead className='w-12 text-center'>
+                  <Checkbox
+                    id="select-all-checkbox"
+                    checked={selectAll}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
+                <TableHead>Kode</TableHead>
+                <TableHead>Password</TableHead>
+                <TableHead>Paket</TableHead>
+                <TableHead>Outlet</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Dibuat</TableHead>
+                <TableHead className='text-right'>Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isFetching ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                    Memuat data voucher...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedVouchers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                    Belum ada voucher.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedVouchers.map((row) => (
+                  <TableRow 
+                    key={row.id}
+                    data-state={selectedRows.has(row.id) ? "selected" : undefined}
+                  >
+                    <TableCell className='text-center'>
+                      <Checkbox
+                        id={`row-${row.id}-checkbox`}
+                        checked={selectedRows.has(row.id)}
+                        onCheckedChange={(checked) =>
+                          handleSelectRow(row.id, checked === true)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className='font-medium'>{row.username || row.kode}</TableCell>
+                    <TableCell className='text-muted-foreground'>{row.password}</TableCell>
+                    <TableCell>{row.profile?.name || row.paket || '-'}</TableCell>
+                    <TableCell>{row.outletName || row.outlet || '-'}</TableCell>
+                    <TableCell>
+                      {row.status === "UNUSED" || row.status === "Aktif" ? (
+                        <Badge variant='outline' className='text-green-500 border-green-500/20 bg-green-500/10 font-normal'>
+                          Aktif
+                        </Badge>
+                      ) : row.status === "USED" || row.status === "Terpakai" ? (
+                        <Badge variant='outline' className='text-muted-foreground font-normal'>
+                          Terpakai
+                        </Badge>
+                      ) : (
+                        <Badge variant='outline' className='text-red-500 border-red-500/20 bg-red-500/10 font-normal'>
+                          {row.status}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className='text-muted-foreground'>
+                      {new Date(row.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </TableCell>
+                    <TableCell className='text-right'>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant='ghost' size='icon' className='size-8'>
+                            <MoreHorizontalIcon />
+                            <span className='sr-only'>Buka menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
+                          <DropdownMenuItem onClick={() => handlePrintSingle(row.id)}>
+                            <PrinterIcon className="mr-2 h-4 w-4" /> Cetak PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant='destructive' onClick={() => setVoucherToDelete(row.id)}>
+                            <Trash2Icon className="mr-2 h-4 w-4" /> Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <span>Tampilkan</span>
+              <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={pageSize.toString()} />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 20, 50, 100].map((size) => (
+                    <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>per halaman</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous</span>
+              </Button>
+              <div className="text-sm font-medium px-2">
+                Hal {currentPage} dari {totalPages || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Next</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            <Card className="flex flex-col">
+              <CardHeader className="items-center pb-0">
+                <CardTitle>Rasio Pemakaian Voucher</CardTitle>
+                <CardDescription>Bulan Ini (Juni 2026)</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 pb-0 mt-4">
+                <div className="mx-auto aspect-square max-h-[300px] pb-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <RechartsTooltip 
+                        contentStyle={{ backgroundColor: 'var(--color-background)', borderColor: 'var(--color-border)', borderRadius: '8px' }} 
+                        itemStyle={{ color: 'var(--color-foreground)' }}
+                      />
+                      <Pie 
+                        data={dynamicPieData} 
+                        dataKey="value" 
+                        nameKey="name" 
+                        label 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+              <CardFooter className="flex-col gap-2 text-sm mt-4">
+                <div className="flex items-center gap-2 leading-none font-medium">
+                  {usedVouchers} voucher telah digunakan
+                </div>
+                <div className="leading-none text-muted-foreground text-center">
+                  Menampilkan rasio voucher aktif vs terpakai
+                </div>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        {/* Alert Dialog Hapus Satuan */}
+        <AlertDialog open={!!voucherToDelete} onOpenChange={(open) => !open && setVoucherToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Voucher?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Voucher yang dihapus tidak dapat dipulihkan kembali dan akan terhapus juga di router MikroTik.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setVoucherToDelete(null)}>Batal</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => { if(voucherToDelete) handleDeleteConfirm(voucherToDelete); setVoucherToDelete(null) }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Hapus Voucher
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Alert Dialog Hapus Massal */}
+        <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus {selectedRows.size} Voucher Sekaligus?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tindakan ini akan menghapus semua voucher yang dipilih secara permanen dari sistem dan router.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsBulkDeleteAlertOpen(false)}>Batal</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => { handleDeleteConfirm(Array.from(selectedRows)); setIsBulkDeleteAlertOpen(false) }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Hapus Massal
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        </>
+        )}
+      </Main>
+    </>
+  )
+}

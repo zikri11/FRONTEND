@@ -19,6 +19,7 @@
     "test:browser:install": "playwright install chromium --with-deps"
   },
   "dependencies": {
+    "@base-ui/react": "^1.6.0",
     "@clerk/react": "^6.4.3",
     "@headlessui/react": "^2.2.10",
     "@hookform/resolvers": "^5.2.2",

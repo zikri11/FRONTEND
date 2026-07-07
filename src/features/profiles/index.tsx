@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { Upload, Download, Users, Tag, MoreHorizontalIcon, RefreshCw } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -38,64 +40,79 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { useServerStore } from '@/stores/server-store'
 import { api } from '@/lib/axios'
+import { qk } from '@/lib/query-keys'
 import { toast } from 'sonner'
+
+type HotspotProfile = {
+  id: string
+  name: string
+  rateLimit?: string
+  description?: string
+  syncedToRouter?: boolean
+  sharedUsers?: number
+  validity?: string
+}
 
 export function Profiles() {
   const { activeServerId, isLoading } = useServerStore()
-  const [profiles, setProfiles] = useState<any[]>([])
-  const [isFetching, setIsFetching] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
+  const queryClient = useQueryClient()
   const [profileToDelete, setProfileToDelete] = useState<string | null>(null)
 
-  const fetchProfiles = useCallback(async () => {
-    if (!activeServerId) return
-    setIsFetching(true)
-    try {
-      // Ensure the backend endpoint expects or tolerates ?serverId filter
-      const res = await api.get(`/profiles`, { params: { serverId: activeServerId } })
-      setProfiles(res.data)
-    } catch (error) {
-      toast.error('Gagal mengambil data profil')
-    } finally {
-      setIsFetching(false)
-    }
-  }, [activeServerId])
+  // Profiles list — scoped to the active router. `signal` cancels the request
+  // when the router changes quickly, killing the stale-write race.
+  const {
+    data: profiles = [],
+    isPending,
+    isError,
+    refetch,
+  } = useQuery<HotspotProfile[]>({
+    queryKey: qk.profiles(activeServerId ?? 'none'),
+    queryFn: ({ signal }) =>
+      api
+        .get('/profiles', { params: { serverId: activeServerId }, signal })
+        .then((res) => res.data),
+    enabled: !!activeServerId,
+  })
 
-  useEffect(() => {
-    fetchProfiles()
-  }, [fetchProfiles])
-
-  const handleDeleteConfirm = async () => {
-    if (profileToDelete) {
-      try {
-        await api.delete(`/profiles/${profileToDelete}`)
-        toast.success('Profil berhasil dihapus')
-        fetchProfiles()
-      } catch (error) {
-        toast.error('Gagal menghapus profil')
-      } finally {
-        setProfileToDelete(null)
-      }
+  const invalidateProfiles = () => {
+    if (activeServerId) {
+      queryClient.invalidateQueries({ queryKey: qk.profiles(activeServerId) })
     }
   }
 
-  const handleSync = async () => {
-    if (!activeServerId) return
-    setIsSyncing(true)
-    toast.info('Memulai proses sinkronisasi...')
-    try {
-      await api.post(`/profiles/sync/${activeServerId}`)
+  const syncMutation = useMutation({
+    mutationFn: () => api.post(`/profiles/sync/${activeServerId}`),
+    onMutate: () => {
+      toast.info('Memulai proses sinkronisasi...')
+    },
+    onSuccess: () => {
       toast.success('Profil berhasil disinkronkan dengan router!')
-      // Sync endpoint is synchronous + transactional and returns a summary
-      // object (not the profile list), so refetch afterwards. Awaited so the
-      // spinner and the refreshed table stay coherent.
-      await fetchProfiles()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mensinkronkan data profil.')
-    } finally {
-      setIsSyncing(false)
-    }
-  }
+      // Sync returns a summary object (not the list) and is synchronous +
+      // transactional, so invalidating triggers a fresh, correct refetch.
+      invalidateProfiles()
+    },
+    onError: (error) => {
+      const msg =
+        error instanceof AxiosError ? error.response?.data?.message : undefined
+      toast.error(msg || 'Gagal mensinkronkan data profil.')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/profiles/${id}`),
+    onSuccess: () => {
+      toast.success('Profil berhasil dihapus')
+      invalidateProfiles()
+    },
+    onError: () => {
+      toast.error('Gagal menghapus profil')
+    },
+    onSettled: () => {
+      setProfileToDelete(null)
+    },
+  })
+
+  const isSyncing = syncMutation.isPending
 
   return (
     <>
@@ -119,7 +136,7 @@ export function Profiles() {
                 </p>
               </div>
               <div className='flex gap-2'>
-                <Button variant='outline' onClick={handleSync} disabled={isSyncing}>
+                <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
                   <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                   {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
                 </Button>
@@ -142,10 +159,19 @@ export function Profiles() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isFetching ? (
+              {isPending ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                     Memuat data profil...
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-6">
+                    <p className="text-muted-foreground">Gagal memuat data profil.</p>
+                    <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
+                      Coba Lagi
+                    </Button>
                   </TableCell>
                 </TableRow>
               ) : profiles.length === 0 ? (
@@ -167,7 +193,7 @@ export function Profiles() {
                       </TableCell>
                       <TableCell>
                         <Badge variant='outline' className={`flex w-fit items-center font-normal rounded-full px-2.5 py-0.5 border-muted/50 whitespace-nowrap bg-background ${profile.syncedToRouter ? 'text-muted-foreground' : 'text-amber-500'}`}>
-                          <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${profile.syncedToRouter ? 'bg-green-500' : 'bg-amber-500'}`} /> 
+                          <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${profile.syncedToRouter ? 'bg-green-500' : 'bg-amber-500'}`} />
                           {profile.syncedToRouter ? 'Sinkron' : 'Belum Sinkron'}
                         </Badge>
                       </TableCell>
@@ -224,8 +250,9 @@ export function Profiles() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setProfileToDelete(null)}>Batal</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDeleteConfirm}
+              <AlertDialogAction
+                onClick={() => profileToDelete && deleteMutation.mutate(profileToDelete)}
+                disabled={deleteMutation.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Hapus Profil

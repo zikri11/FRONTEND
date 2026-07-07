@@ -1,4 +1,5 @@
-import { MoreHorizontalIcon } from 'lucide-react'
+import { useState } from 'react'
+import { MoreHorizontalIcon, Copy, Check, Download } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +23,13 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { JsonViewer } from '@/components/json-viewer'
 
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
@@ -38,6 +46,26 @@ type ActivityLog = {
 
 export function ActivityHistory() {
   const { activeServerId, isLoading } = useServerStore()
+  const [detailLog, setDetailLog] = useState<ActivityLog | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const detailJson = detailLog ? JSON.stringify(detailLog, null, 2) : ''
+
+  const copyJson = () => {
+    navigator.clipboard.writeText(detailJson)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  const downloadJson = () => {
+    const blob = new Blob([detailJson], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `activity-${detailLog?.id ?? 'log'}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   // Live activity feed — polled every 3s to meet the <5s freshness SLA. This
   // hits the backend log endpoint (DB), NOT the router, so it's cheap.
@@ -146,7 +174,7 @@ export function ActivityHistory() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
-                          <DropdownMenuItem onClick={() => alert(JSON.stringify(log, null, 2))}>Lihat Detail JSON</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDetailLog(log)}>Lihat Detail JSON</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigator.clipboard.writeText(log.id)}>Salin ID Log</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -161,6 +189,38 @@ export function ActivityHistory() {
         </>
         )}
       </Main>
+
+      <Dialog
+        open={!!detailLog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailLog(null)
+            setCopied(false)
+          }
+        }}
+      >
+        <DialogContent className='gap-0 overflow-hidden p-0 sm:max-w-[min(1000px,92vw)]'>
+          <DialogHeader className='flex flex-row items-center justify-between gap-2 space-y-0 border-b px-5 py-3'>
+            <DialogTitle className='text-sm font-medium'>Activity JSON</DialogTitle>
+            <div className='flex items-center gap-1 pe-6'>
+              <Button variant='ghost' size='sm' className='h-8 gap-1.5 text-xs' onClick={copyJson}>
+                {copied ? (
+                  <Check className='h-3.5 w-3.5 text-emerald-500' />
+                ) : (
+                  <Copy className='h-3.5 w-3.5' />
+                )}
+                {copied ? 'Tersalin' : 'Salin'}
+              </Button>
+              <Button variant='ghost' size='sm' className='h-8 gap-1.5 text-xs' onClick={downloadJson}>
+                <Download className='h-3.5 w-3.5' /> Unduh
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className='p-4'>
+            {detailLog && <JsonViewer data={detailLog} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

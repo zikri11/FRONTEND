@@ -55,7 +55,10 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { useServerStore } from '@/stores/server-store'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
+import { qk } from '@/lib/query-keys'
 import { toast } from 'sonner'
 
 const vouchersData = [
@@ -84,12 +87,35 @@ const pieData = [
   { name: "Terpakai", value: 406, fill: "var(--color-slate-500)" },
 ]
 
+type Voucher = {
+  id: string
+  username?: string
+  kode?: string
+  password?: string
+  profile?: { name?: string }
+  paket?: string
+  outletName?: string
+  outlet?: string
+  status?: string
+  createdAt: string
+}
+
 export function Vouchers() {
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
   const { activeServerId, isLoading } = useServerStore()
-  const [vouchers, setVouchers] = React.useState<any[]>([])
-  const [isFetching, setIsFetching] = React.useState(false)
-  const [isSyncing, setIsSyncing] = React.useState(false)
+  const queryClient = useQueryClient()
+
+  const {
+    data: vouchers = [],
+    isPending,
+    isError,
+    refetch,
+  } = useQuery<Voucher[]>({
+    queryKey: qk.vouchers(activeServerId ?? 'none'),
+    queryFn: ({ signal }) =>
+      api.get('/vouchers', { params: { serverId: activeServerId }, signal }).then((res) => res.data),
+    enabled: !!activeServerId,
+  })
 
   // Pagination & Action States
   const [currentPage, setCurrentPage] = React.useState(1)
@@ -114,22 +140,11 @@ export function Vouchers() {
     setCurrentPage(1)
   }, [vouchers.length, pageSize])
 
-  const fetchVouchers = React.useCallback(async () => {
-    if (!activeServerId) return
-    setIsFetching(true)
-    try {
-      const res = await api.get(`/vouchers`, { params: { serverId: activeServerId } })
-      setVouchers(res.data)
-    } catch (error) {
-      toast.error('Gagal mengambil data voucher')
-    } finally {
-      setIsFetching(false)
+  const invalidateVouchers = () => {
+    if (activeServerId) {
+      queryClient.invalidateQueries({ queryKey: qk.vouchers(activeServerId) })
     }
-  }, [activeServerId])
-
-  React.useEffect(() => {
-    fetchVouchers()
-  }, [fetchVouchers])
+  }
 
   const selectAll = selectedRows.size === vouchers.length && vouchers.length > 0
 
@@ -151,33 +166,36 @@ export function Vouchers() {
     setSelectedRows(newSelected)
   }
 
-  const handleSync = async () => {
-    if (!activeServerId) return
-    setIsSyncing(true)
-    toast.info('Memulai sinkronisasi...')
-    try {
-      await api.post(`/profiles/sync/${activeServerId}`)
+  const syncMutation = useMutation({
+    mutationFn: () => api.post(`/profiles/sync/${activeServerId}`),
+    onMutate: () => {
+      toast.info('Memulai sinkronisasi...')
+    },
+    onSuccess: () => {
       toast.success('Data voucher & profil berhasil disinkronkan dari router!')
-      fetchVouchers()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mensinkronkan data.')
-    } finally {
-      setIsSyncing(false)
-    }
-  }
+      invalidateVouchers()
+    },
+    onError: (error) => {
+      const msg =
+        error instanceof AxiosError ? error.response?.data?.message : undefined
+      toast.error(msg || 'Gagal mensinkronkan data.')
+    },
+  })
+  const isSyncing = syncMutation.isPending
 
-  const handleDeleteConfirm = async (idOrIds: string | string[]) => {
-    try {
-      const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds]
-      // Use delete-bulk endpoint for both single and multiple
-      await api.post(`/vouchers/delete-bulk`, { ids })
+  const deleteMutation = useMutation({
+    mutationFn: (ids: string[]) => api.post('/vouchers/delete-bulk', { ids }),
+    onSuccess: (_data, ids) => {
       toast.success(`${ids.length} Voucher berhasil dihapus`)
       setSelectedRows(new Set())
-      fetchVouchers()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menghapus voucher')
-    }
-  }
+      invalidateVouchers()
+    },
+    onError: (error) => {
+      const msg =
+        error instanceof AxiosError ? error.response?.data?.message : undefined
+      toast.error(msg || 'Gagal menghapus voucher')
+    },
+  })
 
   const handlePrintSingle = (id: string) => {
     const baseUrl = api.defaults.baseURL || 'http://localhost:3000/api'
@@ -206,7 +224,7 @@ export function Vouchers() {
                 </p>
               </div>
               <div className='flex gap-2 items-center'>
-                <Button variant='outline' onClick={handleSync} disabled={isSyncing}>
+                <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
                   <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                   {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
                 </Button>
@@ -355,10 +373,19 @@ export function Vouchers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isFetching ? (
+              {isPending ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                     Memuat data voucher...
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-6">
+                    <p className="text-muted-foreground">Gagal mengambil data voucher.</p>
+                    <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
+                      Coba Lagi
+                    </Button>
                   </TableCell>
                 </TableRow>
               ) : paginatedVouchers.length === 0 ? (
@@ -518,7 +545,7 @@ export function Vouchers() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setVoucherToDelete(null)}>Batal</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={() => { if(voucherToDelete) handleDeleteConfirm(voucherToDelete); setVoucherToDelete(null) }}
+                onClick={() => { if (voucherToDelete) deleteMutation.mutate([voucherToDelete]); setVoucherToDelete(null) }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Hapus Voucher
@@ -539,7 +566,7 @@ export function Vouchers() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setIsBulkDeleteAlertOpen(false)}>Batal</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={() => { handleDeleteConfirm(Array.from(selectedRows)); setIsBulkDeleteAlertOpen(false) }}
+                onClick={() => { deleteMutation.mutate(Array.from(selectedRows)); setIsBulkDeleteAlertOpen(false) }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Hapus Massal

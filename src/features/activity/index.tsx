@@ -1,10 +1,10 @@
 import { MoreHorizontalIcon } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -23,36 +23,40 @@ import { ConfigDrawer } from '@/components/config-drawer'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 
-// Mock data removed
-import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/axios'
-import { toast } from 'sonner'
+import { qk } from '@/lib/query-keys'
 import { useServerStore } from '@/stores/server-store'
 
+type ActivityLog = {
+  id: string
+  createdAt: string
+  action?: string
+  entity?: string
+  detail?: string
+  server?: { name?: string }
+}
+
 export function ActivityHistory() {
-  const { activeServerId } = useServerStore()
-  const [activityLogs, setActivityLogs] = useState<any[]>([])
-  const [isLoadingActivity, setIsLoadingActivity] = useState(false)
+  const { activeServerId, isLoading } = useServerStore()
 
-  const fetchLogs = useCallback(async () => {
-    if (!activeServerId) return
-    setIsLoadingActivity(true)
-    try {
-      const res = await api.get('/activity-log', {
-        params: { serverId: activeServerId, take: 50 }
-      })
-      // Based on docs, it might be paginated, so it could be res.data.data or res.data
-      setActivityLogs(res.data.data || res.data)
-    } catch (error) {
-      toast.error('Gagal memuat riwayat aktivitas')
-    } finally {
-      setIsLoadingActivity(false)
-    }
-  }, [activeServerId])
+  // Live activity feed — polled every 3s to meet the <5s freshness SLA. This
+  // hits the backend log endpoint (DB), NOT the router, so it's cheap.
+  const {
+    data: activityLogs = [],
+    isPending,
+    isError,
+    refetch,
+  } = useQuery<ActivityLog[]>({
+    queryKey: qk.activity(activeServerId ?? 'none'),
+    queryFn: ({ signal }) =>
+      api
+        .get('/activity-log', { params: { serverId: activeServerId, take: 50 }, signal })
+        .then((res) => res.data?.data ?? res.data ?? []),
+    enabled: !!activeServerId,
+    refetchInterval: 3000,
+    refetchIntervalInBackground: false,
+  })
 
-  useEffect(() => {
-    fetchLogs()
-  }, [fetchLogs])
   return (
     <>
       <Header fixed>
@@ -63,7 +67,7 @@ export function ActivityHistory() {
       </Header>
 
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        {!isLoadingActivity && !activeServerId ? (
+        {!isLoading && !activeServerId ? (
           <EmptyRouterPlaceholder />
         ) : (
           <>
@@ -89,10 +93,19 @@ export function ActivityHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoadingActivity ? (
+              {isPending ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                     Memuat riwayat aktivitas...
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6">
+                    <p className="text-muted-foreground">Gagal memuat riwayat aktivitas.</p>
+                    <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
+                      Coba Lagi
+                    </Button>
                   </TableCell>
                 </TableRow>
               ) : activityLogs.length === 0 ? (
@@ -102,20 +115,22 @@ export function ActivityHistory() {
                   </TableCell>
                 </TableRow>
               ) : (
-                activityLogs.map((log: any) => (
+                activityLogs.map((log) => {
+                  const action = log.action ?? ''
+                  return (
                   <TableRow key={log.id}>
                     <TableCell className='font-mono text-xs text-muted-foreground'>
                       {new Date(log.createdAt).toLocaleString('id-ID', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                        log.action.startsWith('CREATE') || log.action.startsWith('ADD') || log.action.startsWith('SYNC') || log.action.endsWith('CREATED')
+                        action.startsWith('CREATE') || action.startsWith('ADD') || action.startsWith('SYNC') || action.endsWith('CREATED')
                           ? 'bg-green-500/10 text-green-400 ring-green-500/20'
-                          : log.action.startsWith('DELETE') || log.action.endsWith('DELETED') || log.action.includes('FAILED')
+                          : action.startsWith('DELETE') || action.endsWith('DELETED') || action.includes('FAILED')
                           ? 'bg-red-500/10 text-red-400 ring-red-500/20'
                           : 'bg-blue-500/10 text-blue-400 ring-blue-500/20'
                       }`}>
-                        {log.action}
+                        {action || '-'}
                       </span>
                     </TableCell>
                     <TableCell className='font-medium max-w-[300px] truncate sm:max-w-none'>
@@ -137,7 +152,8 @@ export function ActivityHistory() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>

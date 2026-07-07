@@ -284,7 +284,7 @@ export function Chats() {
         <div className='flex h-full w-full overflow-hidden bg-background'>
           {/* Sidebar */}
           <div className={`hidden sm:flex flex-col justify-between shrink-0 bg-muted/40 transition-all duration-300 ease-in-out ${
-            isSidebarOpen ? 'w-[260px] p-4 opacity-100 border-r' : 'w-0 p-0 opacity-0 border-0 overflow-hidden'
+            isSidebarOpen ? 'w-72 p-4 opacity-100 border-r' : 'w-0 p-0 opacity-0 border-0 overflow-hidden'
           }`}>
             <div className='space-y-6 h-full flex flex-col min-w-[228px]'>
               <div className='flex items-center justify-between'>
@@ -402,7 +402,7 @@ export function Chats() {
                             <Bot className="h-5 w-5 text-primary" />
                           </div>
                         )}
-                        <div className={`max-w-[80%] rounded-2xl px-5 py-4 text-[15px] leading-relaxed shadow-sm overflow-hidden ${
+                        <div className={`max-w-none rounded-2xl px-5 py-4 text-[15px] leading-relaxed shadow-sm overflow-hidden ${
                           msg.role === 'user' 
                             ? 'bg-primary text-primary-foreground' 
                             : 'bg-card border text-card-foreground'

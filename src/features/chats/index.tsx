@@ -38,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { useSidebar } from '@/components/ui/sidebar'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ConfigDrawer } from '@/components/config-drawer'
@@ -51,6 +52,7 @@ type Message = {
 
 export function Chats() {
   const { activeServerId, servers, fetchServers } = useServerStore()
+  const { setOpen: setMainSidebarOpen } = useSidebar()
   const [sessions, setSessions] = useState<any[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [activeMessages, setActiveMessages] = useState<Message[]>([])
@@ -76,6 +78,13 @@ export function Chats() {
   useEffect(() => {
     fetchServers()
   }, [])
+
+  // Collapse the main app sidebar on the chat page so chat is full-width;
+  // restore it when navigating away.
+  useEffect(() => {
+    setMainSidebarOpen(false)
+    return () => setMainSidebarOpen(true)
+  }, [setMainSidebarOpen])
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -367,7 +376,7 @@ export function Chats() {
             </header>
             
             <div className="flex-1 overflow-y-auto p-6 bg-muted/10" ref={scrollRef}>
-              <div className="max-w-4xl mx-auto h-full">
+              <div className="w-full h-full">
                 {isLoadingMessages ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     Memuat percakapan...
@@ -429,7 +438,7 @@ export function Chats() {
             </div>
             
             <div className="p-6 border-t shrink-0 bg-card relative">
-              <div className="max-w-4xl mx-auto">
+              <div className="w-full">
                 <form onSubmit={handleSend} className="relative flex w-full items-end gap-3 bg-muted/40 p-2 rounded-3xl border focus-within:ring-2 ring-primary/20 transition-all">
                   
                   {/* Mention Autocomplete Dropdown */}

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Store, Zap, KeyRound } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,6 +27,9 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Search } from '@/components/search'
 import { toast } from 'sonner'
+import { useServerStore } from '@/stores/server-store'
+import { api } from '@/lib/axios'
+import { qk } from '@/lib/query-keys'
 import {
   Field,
   FieldLabel,
@@ -33,19 +38,78 @@ import {
   FieldError,
 } from '@/components/ui/field'
 
+type ProfileOption = { id: string; name: string }
+
+type CharFormat =
+  | 'UPPERCASE'
+  | 'LOWERCASE'
+  | 'MIXED_CASE'
+  | 'LETTERS_ONLY'
+  | 'NUMBERS_ONLY'
+  | 'ALPHANUMERIC'
+
+type BatchPayload = {
+  serverId: string
+  profileId: string
+  count: number
+  usernamePrefix?: string
+  charLength?: number
+  charFormat?: CharFormat
+  outletName?: string
+}
+
+// The two form selects (letters/numbers/alphanumeric + case) map onto the
+// backend's single CharFormat enum.
+function toCharFormat(charType: string, charCase: string): CharFormat {
+  if (charType === 'numbers') return 'NUMBERS_ONLY'
+  if (charType === 'alphanumeric') return 'ALPHANUMERIC'
+  if (charCase === 'lowercase') return 'LOWERCASE'
+  if (charCase === 'mixed') return 'MIXED_CASE'
+  return 'UPPERCASE'
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  const msg = error instanceof AxiosError ? error.response?.data?.message : undefined
+  if (Array.isArray(msg)) return msg.join(', ')
+  return typeof msg === 'string' ? msg : fallback
+}
+
 export function AddBulkVoucher() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const { activeServerId } = useServerStore()
   const [formData, setFormData] = useState({
     profile: '',
     quantity: '10',
     prefix: '',
-    length: '4',
+    length: '6',
     charType: 'alphanumeric', // letters, numbers, alphanumeric
     charCase: 'uppercase', // uppercase, lowercase, mixed
-    outletName: 'KANTOR EG1',
+    outletName: '',
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const { data: profiles = [], isPending: profilesLoading } = useQuery<ProfileOption[]>({
+    queryKey: qk.profiles(activeServerId ?? 'none'),
+    queryFn: ({ signal }) =>
+      api.get('/profiles', { params: { serverId: activeServerId }, signal }).then((r) => r.data),
+    enabled: !!activeServerId,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (payload: BatchPayload) => api.post('/vouchers/batch', payload),
+    onSuccess: (_res, payload) => {
+      toast.success(`${payload.count} voucher sedang dibuat di background — akan muncul bertahap.`)
+      if (activeServerId) {
+        queryClient.invalidateQueries({ queryKey: qk.vouchers(activeServerId) })
+      }
+      router.navigate({ to: '/vouchers' })
+    },
+    onError: (error) => {
+      toast.error(errorMessage(error, 'Gagal membuat voucher massal.'))
+    },
+  })
+  const isSubmitting = createMutation.isPending
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -60,8 +124,9 @@ export function AddBulkVoucher() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!formData.profile) newErrors.profile = 'Profil Hotspot wajib dipilih'
-    
+    if (!activeServerId) newErrors.profile = 'Pilih router dulu lewat "Pilih Router".'
+    else if (!formData.profile) newErrors.profile = 'Profil Hotspot wajib dipilih'
+
     const qty = parseInt(formData.quantity)
     if (!formData.quantity || isNaN(qty) || qty < 1) {
       newErrors.quantity = 'Jumlah voucher tidak valid'
@@ -70,8 +135,8 @@ export function AddBulkVoucher() {
     }
 
     const len = parseInt(formData.length)
-    if (!formData.length || isNaN(len) || len < 3 || len > 12) {
-      newErrors.length = 'Panjang karakter antara 3-12'
+    if (!formData.length || isNaN(len) || len < 4 || len > 10) {
+      newErrors.length = 'Panjang karakter antara 4-10'
     }
 
     setErrors(newErrors)
@@ -84,16 +149,15 @@ export function AddBulkVoucher() {
       toast.error('Harap periksa kembali isian Anda.')
       return
     }
-
-    setIsSubmitting(true)
-    toast.info(`Membuat ${formData.quantity} voucher massal...`)
-
-    // Mock submit
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast.success(`${formData.quantity} voucher berhasil di-generate!`)
-      router.navigate({ to: '/vouchers' })
-    }, 1500)
+    createMutation.mutate({
+      serverId: activeServerId as string,
+      profileId: formData.profile,
+      count: parseInt(formData.quantity),
+      usernamePrefix: formData.prefix || undefined,
+      charLength: parseInt(formData.length),
+      charFormat: toCharFormat(formData.charType, formData.charCase),
+      outletName: formData.outletName || undefined,
+    })
   }
 
   return (
@@ -142,13 +206,21 @@ export function AddBulkVoucher() {
                   <Select
                     value={formData.profile}
                     onValueChange={(val) => handleChange('profile', val)}
+                    disabled={!activeServerId || profilesLoading}
                   >
                     <SelectTrigger aria-invalid={!!errors.profile}>
-                      <SelectValue placeholder='Pilih paket internet' />
+                      <SelectValue placeholder={profilesLoading ? 'Memuat profil...' : 'Pilih paket internet'} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='1orang'>1ORANG (1 Hari - 1M/2M)</SelectItem>
-                      <SelectItem value='default'>default (1 Hari - 2M/2M)</SelectItem>
+                      {profiles.length === 0 ? (
+                        <div className='p-2 text-xs text-muted-foreground'>
+                          Belum ada profil. Buat / sinkron profil dulu.
+                        </div>
+                      ) : (
+                        profiles.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {errors.profile ? (
@@ -209,9 +281,9 @@ export function AddBulkVoucher() {
                   <FieldLabel>Panjang Karakter Acak <span className='text-destructive'>*</span></FieldLabel>
                   <Input
                     type='number'
-                    min='3'
-                    max='12'
-                    placeholder='4'
+                    min='4'
+                    max='10'
+                    placeholder='6'
                     value={formData.length}
                     onChange={(e) => handleChange('length', e.target.value)}
                     aria-invalid={!!errors.length}
@@ -219,7 +291,7 @@ export function AddBulkVoucher() {
                   {errors.length ? (
                     <FieldError>{errors.length}</FieldError>
                   ) : (
-                    <FieldDescription>Jumlah karakter acak yang menempel setelah prefix (contoh: 4 = WXBZ).</FieldDescription>
+                    <FieldDescription>Jumlah karakter acak yang menempel setelah prefix (4-10).</FieldDescription>
                   )}
                 </Field>
 
@@ -260,8 +332,8 @@ export function AddBulkVoucher() {
                     </SelectContent>
                   </Select>
                   <FieldDescription>
-                    {formData.charType === 'numbers' 
-                      ? 'Tidak berlaku untuk Angka Saja.' 
+                    {formData.charType === 'numbers'
+                      ? 'Tidak berlaku untuk Angka Saja.'
                       : 'Atur kapitalisasi huruf pada kode voucher.'}
                   </FieldDescription>
                 </Field>

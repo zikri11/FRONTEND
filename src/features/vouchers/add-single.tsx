@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Ticket, Store } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,6 +27,9 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Search } from '@/components/search'
 import { toast } from 'sonner'
+import { useServerStore } from '@/stores/server-store'
+import { api } from '@/lib/axios'
+import { qk } from '@/lib/query-keys'
 import {
   Field,
   FieldLabel,
@@ -33,16 +38,55 @@ import {
   FieldError,
 } from '@/components/ui/field'
 
+type ProfileOption = { id: string; name: string }
+
+type SinglePayload = {
+  serverId: string
+  profileId: string
+  username?: string
+  password?: string
+  outletName?: string
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  const msg = error instanceof AxiosError ? error.response?.data?.message : undefined
+  if (Array.isArray(msg)) return msg.join(', ')
+  return typeof msg === 'string' ? msg : fallback
+}
+
 export function AddSingleVoucher() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const { activeServerId } = useServerStore()
   const [formData, setFormData] = useState({
     profile: '',
     voucherCode: '',
     password: '',
-    outletName: 'KANTOR EG1',
+    outletName: '',
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const { data: profiles = [], isPending: profilesLoading } = useQuery<ProfileOption[]>({
+    queryKey: qk.profiles(activeServerId ?? 'none'),
+    queryFn: ({ signal }) =>
+      api.get('/profiles', { params: { serverId: activeServerId }, signal }).then((r) => r.data),
+    enabled: !!activeServerId,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (payload: SinglePayload) => api.post('/vouchers/single', payload),
+    onSuccess: () => {
+      toast.success('Voucher berhasil dibuat!')
+      if (activeServerId) {
+        queryClient.invalidateQueries({ queryKey: qk.vouchers(activeServerId) })
+      }
+      router.navigate({ to: '/vouchers' })
+    },
+    onError: (error) => {
+      toast.error(errorMessage(error, 'Gagal membuat voucher.'))
+    },
+  })
+  const isSubmitting = createMutation.isPending
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -57,7 +101,11 @@ export function AddSingleVoucher() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!formData.profile) newErrors.profile = 'Profil Hotspot wajib dipilih'
+    if (!activeServerId) newErrors.profile = 'Pilih router dulu lewat "Pilih Router".'
+    else if (!formData.profile) newErrors.profile = 'Profil Hotspot wajib dipilih'
+    if (formData.voucherCode && (formData.voucherCode.length < 4 || formData.voucherCode.length > 12)) {
+      newErrors.voucherCode = 'Kode voucher harus 4-12 karakter'
+    }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -68,16 +116,13 @@ export function AddSingleVoucher() {
       toast.error('Masih ada isian yang terlewat atau tidak valid.')
       return
     }
-
-    setIsSubmitting(true)
-    toast.info('Membuat voucher tunggal...')
-
-    // Mock submit
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast.success('Voucher berhasil dibuat!')
-      router.navigate({ to: '/vouchers' })
-    }, 1200)
+    createMutation.mutate({
+      serverId: activeServerId as string,
+      profileId: formData.profile,
+      username: formData.voucherCode || undefined,
+      password: formData.password || undefined,
+      outletName: formData.outletName || undefined,
+    })
   }
 
   return (
@@ -126,13 +171,21 @@ export function AddSingleVoucher() {
                   <Select
                     value={formData.profile}
                     onValueChange={(val) => handleChange('profile', val)}
+                    disabled={!activeServerId || profilesLoading}
                   >
                     <SelectTrigger aria-invalid={!!errors.profile}>
-                      <SelectValue placeholder='Pilih paket internet' />
+                      <SelectValue placeholder={profilesLoading ? 'Memuat profil...' : 'Pilih paket internet'} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='1orang'>1ORANG (1 Hari - 1M/2M)</SelectItem>
-                      <SelectItem value='default'>default (1 Hari - 2M/2M)</SelectItem>
+                      {profiles.length === 0 ? (
+                        <div className='p-2 text-xs text-muted-foreground'>
+                          Belum ada profil. Buat / sinkron profil dulu.
+                        </div>
+                      ) : (
+                        profiles.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {errors.profile ? (
@@ -146,11 +199,16 @@ export function AddSingleVoucher() {
                 <Field className='col-span-1'>
                   <FieldLabel>Kode Voucher (Username)</FieldLabel>
                   <Input
-                    placeholder='contoh: VIP-USER'
+                    placeholder='contoh: VIPUSER'
                     value={formData.voucherCode}
                     onChange={(e) => handleChange('voucherCode', e.target.value)}
+                    aria-invalid={!!errors.voucherCode}
                   />
-                  <FieldDescription>Kosongkan jika ingin sistem yang membuat kode acak otomatis.</FieldDescription>
+                  {errors.voucherCode ? (
+                    <FieldError>{errors.voucherCode}</FieldError>
+                  ) : (
+                    <FieldDescription>Kosongkan jika ingin sistem yang membuat kode acak otomatis (4-12 karakter).</FieldDescription>
+                  )}
                 </Field>
 
                 {/* Password */}

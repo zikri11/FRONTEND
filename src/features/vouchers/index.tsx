@@ -5,8 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PieChart, Pie, ResponsiveContainer, Tooltip as RechartsTooltip, Cell } from 'recharts'
-import { TrendingUp } from 'lucide-react'
+import { PieChart, Pie, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,32 +60,6 @@ import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
 import { toast } from 'sonner'
 
-const vouchersData = [
-  {
-    id: "1",
-    kode: "VCH-A8X9",
-    password: "983421",
-    paket: "1ORANG",
-    outlet: "KANTOR EG1",
-    status: "Aktif",
-    dibuat: "29 Jun 2026",
-  },
-  {
-    id: "2",
-    kode: "VCH-B7F2",
-    password: "124987",
-    paket: "default",
-    outlet: "LYF",
-    status: "Terpakai",
-    dibuat: "28 Jun 2026",
-  },
-]
-
-const pieData = [
-  { name: "Belum Dipakai", value: 842, fill: "var(--color-indigo-500)" },
-  { name: "Terpakai", value: 406, fill: "var(--color-slate-500)" },
-]
-
 type Voucher = {
   id: string
   username?: string
@@ -102,8 +75,11 @@ type Voucher = {
 
 export function Vouchers() {
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
-  const { activeServerId, isLoading } = useServerStore()
+  const { servers, activeServerId, isLoading } = useServerStore()
   const queryClient = useQueryClient()
+  const activeServer = servers.find((s) => s.id === activeServerId)
+  const [search, setSearch] = React.useState('')
+  const [profileFilter, setProfileFilter] = React.useState('all')
 
   const {
     data: vouchers = [],
@@ -123,7 +99,7 @@ export function Vouchers() {
   const [voucherToDelete, setVoucherToDelete] = React.useState<string | null>(null)
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false)
 
-  // Dynamic calculations
+  // Dynamic calculations (stats over ALL vouchers on this router)
   const totalVouchers = vouchers.length
   const usedVouchers = vouchers.filter(v => v.status === 'USED' || v.status === 'Terpakai').length
   const unusedVouchers = totalVouchers - usedVouchers
@@ -133,12 +109,25 @@ export function Vouchers() {
     { name: "Terpakai", value: usedVouchers, fill: "hsl(var(--muted-foreground))" },
   ]
 
-  const totalPages = Math.ceil(totalVouchers / pageSize)
-  const paginatedVouchers = vouchers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  // Distinct profile names present, for the filter dropdown
+  const profileNames = Array.from(
+    new Set(vouchers.map((v) => v.profile?.name).filter((n): n is string => !!n))
+  )
 
-  React.useEffect(() => {
-    setCurrentPage(1)
-  }, [vouchers.length, pageSize])
+  // Search + profile filter, then client-side pagination over the result
+  const filteredVouchers = vouchers.filter((v) => {
+    const q = search.trim().toLowerCase()
+    const matchesSearch =
+      !q ||
+      (v.username || v.kode || '').toLowerCase().includes(q) ||
+      (v.password || '').toLowerCase().includes(q)
+    const matchesProfile = profileFilter === 'all' || v.profile?.name === profileFilter
+    return matchesSearch && matchesProfile
+  })
+
+  const totalPages = Math.ceil(filteredVouchers.length / pageSize)
+  const safePage = Math.min(currentPage, totalPages) || 1
+  const paginatedVouchers = filteredVouchers.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const invalidateVouchers = () => {
     if (activeServerId) {
@@ -220,7 +209,7 @@ export function Vouchers() {
               <div>
                 <h2 className='text-2xl font-bold tracking-tight'>Voucher Hotspot</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
-                  Buat voucher instan & massal di KANTOR EG1.
+                  Buat voucher instan & massal di {activeServer?.name || activeServer?.host || 'router ini'}.
                 </p>
               </div>
               <div className='flex gap-2 items-center'>
@@ -325,18 +314,20 @@ export function Vouchers() {
               type="search"
               placeholder="Cari kode atau username..."
               className="pl-8 w-full"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
             />
           </div>
           <div className="w-full sm:w-[200px]">
-            <Select defaultValue="all">
+            <Select value={profileFilter} onValueChange={(v) => { setProfileFilter(v); setCurrentPage(1) }}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter Profil" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Profil</SelectItem>
-                <SelectItem value="1orang">1 Orang (1 Mbps)</SelectItem>
-                <SelectItem value="vip">VIP (5 Mbps)</SelectItem>
-                <SelectItem value="1hari">1 Hari Unlimited</SelectItem>
+                {profileNames.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -391,7 +382,7 @@ export function Vouchers() {
               ) : paginatedVouchers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
-                    Belum ada voucher.
+                    {search || profileFilter !== 'all' ? 'Tidak ada voucher yang cocok.' : 'Belum ada voucher.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -459,7 +450,7 @@ export function Vouchers() {
           <div className="flex items-center justify-between px-4 py-3 border-t">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <span>Tampilkan</span>
-              <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(Number(v))}>
+              <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1) }}>
                 <SelectTrigger className="h-8 w-[70px]">
                   <SelectValue placeholder={pageSize.toString()} />
                 </SelectTrigger>
@@ -475,20 +466,20 @@ export function Vouchers() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+                disabled={safePage <= 1}
               >
                 <ChevronLeft className="h-4 w-4" />
                 <span className="sr-only">Previous</span>
               </Button>
               <div className="text-sm font-medium px-2">
-                Hal {currentPage} dari {totalPages || 1}
+                Hal {safePage} dari {totalPages || 1}
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+                disabled={safePage >= totalPages || totalPages === 0}
               >
                 <ChevronRight className="h-4 w-4" />
                 <span className="sr-only">Next</span>

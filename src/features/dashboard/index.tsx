@@ -21,102 +21,132 @@ import { useServerStore } from '@/stores/server-store'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { DisconnectedRouterPlaceholder } from '@/components/disconnected-router-placeholder'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
+import { qk } from '@/lib/query-keys'
 import { Lock, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
+type ActiveUser = {
+  user?: string
+  name?: string
+  address?: string
+  macAddress?: string
+  uptime?: string
+}
+
+type DashboardMetrics = {
+  activeUsers: number
+  activeUsersList: ActiveUser[]
+  vouchers: number
+  uptime: string
+  interfaces: number
+  isForbidden: boolean
+  isDisconnected: boolean
+}
+
+const EMPTY_METRICS: DashboardMetrics = {
+  activeUsers: 0,
+  activeUsersList: [],
+  vouchers: 0,
+  uptime: '-',
+  interfaces: 0,
+  isForbidden: false,
+  isDisconnected: false,
+}
+
+const is403 = (e: unknown) => e instanceof AxiosError && e.response?.status === 403
+
+// Aggregates every dashboard metric in one pass. Never throws: a connection
+// failure surfaces as `isDisconnected`, an OWNER-restricted panel as
+// `isForbidden` — so the query always resolves with a metrics snapshot.
+async function fetchDashboardMetrics(
+  serverId: string,
+  signal: AbortSignal
+): Promise<DashboardMetrics> {
+  const metrics: DashboardMetrics = { ...EMPTY_METRICS }
+
+  // Vouchers (allowed for all roles)
+  try {
+    const vRes = await api.get('/vouchers', { params: { serverId }, signal })
+    metrics.vouchers = vRes.data?.length || 0
+  } catch (e) {
+    if (!is403(e)) metrics.isDisconnected = true
+  }
+
+  // Traffic (allowed for all roles)
+  try {
+    const tRes = await api.get(`/monitoring/traffic/${serverId}`, { signal })
+    metrics.interfaces = Array.isArray(tRes.data)
+      ? tRes.data.filter((i: { running?: boolean }) => i.running).length
+      : 0
+  } catch (e) {
+    if (!is403(e)) metrics.isDisconnected = true
+  }
+
+  // Active users + resources (forbidden for OWNER)
+  try {
+    const [aRes, rRes] = await Promise.all([
+      api.get(`/monitoring/active/${serverId}`, { signal }),
+      api.get(`/monitoring/resources/${serverId}`, { signal }),
+    ])
+    metrics.activeUsers = aRes.data?.length || 0
+    metrics.activeUsersList = aRes.data || []
+    metrics.uptime = rRes.data?.uptime || '-'
+  } catch (e) {
+    if (is403(e)) metrics.isForbidden = true
+    else metrics.isDisconnected = true
+  }
+
+  return metrics
+}
+
 export function Dashboard() {
   const { activeServerId, isLoading } = useServerStore()
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [isDisconnected, setIsDisconnected] = useState(false)
+  const queryClient = useQueryClient()
   const [isRetrying, setIsRetrying] = useState(false)
-  const [metrics, setMetrics] = useState({
-    activeUsers: 0,
-    activeUsersList: [] as any[],
-    vouchers: 0,
-    uptime: '-',
-    interfaces: 0,
-    isForbidden: false
+
+  // One aggregated query, polled every 3s (against the backend, not the
+  // router directly). queryFn never throws, so failures show as isDisconnected.
+  const { data: metrics = EMPTY_METRICS, isPending, refetch } = useQuery({
+    queryKey: ['dashboard-metrics', activeServerId ?? 'none'],
+    queryFn: ({ signal }) => fetchDashboardMetrics(activeServerId as string, signal),
+    enabled: !!activeServerId,
+    refetchInterval: 3000,
   })
 
-  const fetchMetrics = useCallback(async (isManualRetry = false) => {
-    if (!activeServerId) return
-    if (isManualRetry) setIsRetrying(true)
+  const isDisconnected = !isPending && metrics.isDisconnected
 
-    let isOffline = false
-
-    // Fetch vouchers (allowed for all)
-    try {
-      const vRes = await api.get('/vouchers', { params: { serverId: activeServerId } })
-      setMetrics(prev => ({ ...prev, vouchers: vRes.data?.length || 0 }))
-    } catch (e: any) {
-      console.error(e)
-      if (!e.response || e.response.status !== 403) isOffline = true
-    }
-
-    // Fetch traffic (allowed for all)
-    try {
-      const tRes = await api.get(`/monitoring/traffic/${activeServerId}`)
-      const activeIfaces = Array.isArray(tRes.data) ? tRes.data.filter((i: any) => i.running).length : 0
-      setMetrics(prev => ({ ...prev, interfaces: activeIfaces }))
-    } catch (e: any) {
-      console.error(e)
-      if (!e.response || e.response.status !== 403) isOffline = true
-    }
-
-    // Fetch active & resources (forbidden for OWNER)
-    try {
-      const [aRes, rRes] = await Promise.all([
-        api.get(`/monitoring/active/${activeServerId}`),
-        api.get(`/monitoring/resources/${activeServerId}`)
-      ])
-      setMetrics(prev => ({
-        ...prev,
-        activeUsers: aRes.data?.length || 0,
-        activeUsersList: aRes.data || [],
-        uptime: rRes.data?.uptime || '-',
-        isForbidden: false
-      }))
-    } catch (e: any) {
-      if (e.response?.status === 403) {
-        setMetrics(prev => ({ ...prev, isForbidden: true }))
-      } else {
-        isOffline = true
-      }
-    }
-
-    setIsDisconnected(isOffline)
-    if (isManualRetry) {
-      setIsRetrying(false)
-      if (!isOffline) toast.success('Berhasil terhubung kembali!')
-    }
-  }, [activeServerId])
-
-  useEffect(() => {
-    fetchMetrics()
-    // Polling setiap 3 detik
-    const interval = setInterval(() => {
-      fetchMetrics()
-    }, 3000)
-    
-    return () => clearInterval(interval)
-  }, [fetchMetrics])
-
-  const handleSync = async () => {
-    if (!activeServerId) return
-    setIsSyncing(true)
-    toast.info('Memulai proses sinkronisasi...')
-    try {
-      await api.post(`/profiles/sync/${activeServerId}`)
-      toast.success('Berhasil menarik data profil dan voucher terbaru dari router!')
-      fetchMetrics() // Segarkan angka dashboard
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mensinkronkan data.')
-    } finally {
-      setIsSyncing(false)
+  const handleRetry = async () => {
+    setIsRetrying(true)
+    const res = await refetch()
+    setIsRetrying(false)
+    if (res.data && !res.data.isDisconnected) {
+      toast.success('Berhasil terhubung kembali!')
     }
   }
+
+  const syncMutation = useMutation({
+    mutationFn: () => api.post(`/profiles/sync/${activeServerId}`),
+    onMutate: () => {
+      toast.info('Memulai proses sinkronisasi...')
+    },
+    onSuccess: () => {
+      toast.success('Berhasil menarik data profil dan voucher terbaru dari router!')
+      queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', activeServerId ?? 'none'] })
+      if (activeServerId) {
+        queryClient.invalidateQueries({ queryKey: qk.vouchers(activeServerId) })
+      }
+    },
+    onError: (error) => {
+      const msg =
+        error instanceof AxiosError ? error.response?.data?.message : undefined
+      toast.error(msg || 'Gagal mensinkronkan data.')
+    },
+  })
+  const isSyncing = syncMutation.isPending
 
   return (
     <>
@@ -134,16 +164,16 @@ export function Dashboard() {
         {!isLoading && !activeServerId ? (
           <EmptyRouterPlaceholder />
         ) : isDisconnected ? (
-          <DisconnectedRouterPlaceholder 
-            onRetry={() => fetchMetrics(true)} 
-            isRetrying={isRetrying} 
+          <DisconnectedRouterPlaceholder
+            onRetry={handleRetry}
+            isRetrying={isRetrying}
           />
         ) : (
           <>
             <div className='mb-2 flex items-center justify-between space-y-2'>
               <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
           <div className='flex items-center space-x-2'>
-            <Button onClick={handleSync} disabled={isSyncing}>
+            <Button onClick={() => syncMutation.mutate()} disabled={isSyncing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
               {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
             </Button>

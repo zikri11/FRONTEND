@@ -130,7 +130,7 @@ export function Technicians() {
       <div className='p-6'>
         <div className='mb-6 flex items-center justify-between'>
           <div>
-            <h1 className='text-2xl font-bold tracking-tight'>Kelola Teknisi</h1>
+            <h1 className='text-2xl font-semibold tracking-tight'>Kelola Teknisi</h1>
             <p className='text-muted-foreground'>
               Manajemen akun teknisi yang dapat mengelola router Anda.
             </p>
@@ -183,7 +183,7 @@ export function Technicians() {
                     <TableCell>{tech.email}</TableCell>
                     <TableCell>
                       {tech.isActive ? (
-                        <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20">
+                        <Badge variant="secondary" className="bg-success/10 text-success hover:bg-success/20 border-success/20">
                           <BadgeCheck className="w-3.5 h-3.5 mr-1" data-icon="inline-start" />
                           Aktif
                         </Badge>

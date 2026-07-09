@@ -57,6 +57,7 @@ import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { useServerStore } from '@/stores/server-store'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 
 type PosKey = {
   id: string
@@ -181,9 +182,10 @@ export function Keys() {
           <EmptyRouterPlaceholder />
         ) : (
           <>
+            <div className={`${outerBoxClass} flex-1`}>
             <div className='flex flex-wrap items-start justify-between gap-2'>
               <div>
-                <h2 className='text-2xl font-bold tracking-tight'>Integrasi POS</h2>
+                <h2 className='text-2xl font-semibold tracking-tight'>Integrasi POS</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
                   Hubungkan mesin kasir (POS) ke sistem. Kelola API key untuk router yang dipilih.
                 </p>
@@ -191,7 +193,7 @@ export function Keys() {
               <Button onClick={openCreate}>Buat API Key</Button>
             </div>
 
-            <div className='mt-4 rounded-md border bg-background'>
+            <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
               <Table>
                 <TableHeader className='bg-muted/50'>
                   <TableRow>
@@ -242,7 +244,7 @@ export function Keys() {
                         <TableCell className='text-muted-foreground'>{key.serverName || '-'}</TableCell>
                         <TableCell>
                           {key.isActive ? (
-                            <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
+                            <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
                               Aktif
                             </Badge>
                           ) : (
@@ -279,6 +281,7 @@ export function Keys() {
                   )}
                 </TableBody>
               </Table>
+            </div>
             </div>
           </>
         )}
@@ -356,7 +359,7 @@ export function Keys() {
                 {revealed?.key}
               </code>
               <Button variant='outline' size='icon' onClick={copyRawKey} aria-label='Salin key'>
-                {copied ? <Check className='h-4 w-4 text-green-500' /> : <Copy className='h-4 w-4' />}
+                {copied ? <Check className='h-4 w-4 text-success' /> : <Copy className='h-4 w-4' />}
               </Button>
             </div>
           </div>

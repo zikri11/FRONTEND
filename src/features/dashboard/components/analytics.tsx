@@ -38,7 +38,7 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>1,248</div>
+            <div className='text-2xl font-semibold tracking-tight tabular-nums'>1,248</div>
             <p className='text-xs text-muted-foreground'>+12.4% vs last week</p>
           </CardContent>
         </Card>
@@ -62,7 +62,7 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>832</div>
+            <div className='text-2xl font-semibold tracking-tight tabular-nums'>832</div>
             <p className='text-xs text-muted-foreground'>+5.8% vs last week</p>
           </CardContent>
         </Card>
@@ -83,7 +83,7 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>42%</div>
+            <div className='text-2xl font-semibold tracking-tight tabular-nums'>42%</div>
             <p className='text-xs text-muted-foreground'>-3.2% vs last week</p>
           </CardContent>
         </Card>
@@ -105,7 +105,7 @@ export function Analytics() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>3m 24s</div>
+            <div className='text-2xl font-semibold tracking-tight tabular-nums'>3m 24s</div>
             <p className='text-xs text-muted-foreground'>+18s vs last week</p>
           </CardContent>
         </Card>

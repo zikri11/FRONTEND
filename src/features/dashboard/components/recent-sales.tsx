@@ -35,11 +35,11 @@ export function RecentSales({ data = [], isForbidden = false }: RecentSalesProps
           <div className='flex flex-1 flex-wrap items-center justify-between'>
             <div className='space-y-1'>
               <p className='text-sm leading-none font-medium'>{user.user || user.name || 'Unknown'}</p>
-              <p className='text-xs text-muted-foreground'>
+              <p className='font-mono text-xs text-muted-foreground'>
                 IP: {user.address || '-'} • MAC: {user.macAddress || '-'}
               </p>
             </div>
-            <div className='text-xs font-medium'>Uptime: {user.uptime || '-'}</div>
+            <div className='text-xs font-medium tabular-nums'>Uptime: {user.uptime || '-'}</div>
           </div>
         </div>
       ))}

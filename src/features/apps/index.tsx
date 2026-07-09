@@ -94,7 +94,7 @@ export function Apps() {
       {/* ===== Content ===== */}
       <Main fixed>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>
+          <h1 className='text-2xl font-semibold tracking-tight'>
             App Integrations
           </h1>
           <p className='text-muted-foreground'>
@@ -159,7 +159,7 @@ export function Apps() {
                 <Button
                   variant='outline'
                   size='sm'
-                  className={`${app.connected ? 'border border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900' : ''}`}
+                  className={`${app.connected ? 'border border-info/30 bg-info/5 hover:bg-info/10 dark:border-info/40 dark:bg-info/10 dark:hover:bg-info/15' : ''}`}
                 >
                   {app.connected ? 'Connected' : 'Connect'}
                 </Button>

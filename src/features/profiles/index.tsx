@@ -41,6 +41,7 @@ import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { useServerStore } from '@/stores/server-store'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { toast } from 'sonner'
 
 type HotspotProfile = {
@@ -128,9 +129,10 @@ export function Profiles() {
           <EmptyRouterPlaceholder />
         ) : (
           <>
+            <div className={`${outerBoxClass} flex-1`}>
             <div className='flex flex-wrap items-start justify-between gap-2'>
               <div>
-                <h2 className='text-2xl font-bold tracking-tight'>Profil Hotspot</h2>
+                <h2 className='text-2xl font-semibold tracking-tight'>Profil Hotspot</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
                   Kelola paket bandwidth & masa aktif router Anda.
                 </p>
@@ -146,13 +148,13 @@ export function Profiles() {
               </div>
             </div>
 
-        <div className='mt-4 rounded-md border bg-background'>
+        <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
           <Table>
             <TableHeader className='bg-muted/50'>
               <TableRow>
                 <TableHead>Profil</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Bandwidth (Up/Down)</TableHead>
+                <TableHead>Bandwidth</TableHead>
                 <TableHead>Shared</TableHead>
                 <TableHead>Masa Aktif</TableHead>
                 <TableHead className='text-right'>Aksi</TableHead>
@@ -200,11 +202,11 @@ export function Profiles() {
                       </TableCell>
                       <TableCell>
                         {profile.syncedToRouter ? (
-                          <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
+                          <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
                             Sinkron
                           </Badge>
                         ) : (
-                          <Badge size='sm' className='border-amber-500/20 bg-amber-500/10 text-amber-500'>
+                          <Badge size='sm' className='border-warning/20 bg-warning/10 text-warning'>
                             Belum Sinkron
                           </Badge>
                         )}
@@ -250,6 +252,7 @@ export function Profiles() {
               )}
             </TableBody>
           </Table>
+        </div>
         </div>
 
         <AlertDialog open={!!profileToDelete} onOpenChange={(open) => !open && setProfileToDelete(null)}>

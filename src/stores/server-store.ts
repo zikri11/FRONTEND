@@ -10,6 +10,7 @@ export interface MikrotikServer {
   username: string
   useSSL: boolean
   lastStatus: string
+  lastCheckedAt: string | null
   ownerId: string
   createdAt: string
   updatedAt: string

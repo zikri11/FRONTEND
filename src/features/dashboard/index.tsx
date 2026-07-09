@@ -17,6 +17,11 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
 import { RecentSales } from './components/recent-sales'
 import { ChatBubble } from './components/chat-bubble'
+import {
+  RouterHealthPanel,
+  type RouterResources,
+  type TrafficInterface,
+} from './components/router-health-panel'
 import { useServerStore } from '@/stores/server-store'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { DisconnectedRouterPlaceholder } from '@/components/disconnected-router-placeholder'
@@ -26,6 +31,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { Lock, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -41,8 +47,9 @@ type DashboardMetrics = {
   activeUsers: number
   activeUsersList: ActiveUser[]
   vouchers: number
-  uptime: string
-  interfaces: number
+  resources: RouterResources | null
+  traffic: TrafficInterface[]
+  trafficRate: { rx: number; tx: number } | null
   isForbidden: boolean
   isDisconnected: boolean
 }
@@ -51,17 +58,54 @@ const EMPTY_METRICS: DashboardMetrics = {
   activeUsers: 0,
   activeUsersList: [],
   vouchers: 0,
-  uptime: '-',
-  interfaces: 0,
+  resources: null,
+  traffic: [],
+  trafficRate: null,
   isForbidden: false,
   isDisconnected: false,
 }
 
+// Counter kumulatif tick sebelumnya per router — untuk menghitung rate trafik
+// (bit/detik) dari delta antar poll. Module-level agar bertahan antar render.
+const prevTrafficCounters = new Map<string, { ts: number; rx: number; tx: number }>()
+
+function computeTrafficRate(
+  serverId: string,
+  traffic: TrafficInterface[]
+): { rx: number; tx: number } | null {
+  if (!traffic.length) {
+    prevTrafficCounters.delete(serverId)
+    return null
+  }
+  const rx = traffic.reduce((s, t) => s + (t.rxByte || 0), 0)
+  const tx = traffic.reduce((s, t) => s + (t.txByte || 0), 0)
+  const now = Date.now()
+  const prev = prevTrafficCounters.get(serverId)
+  prevTrafficCounters.set(serverId, { ts: now, rx, tx })
+  if (!prev || now <= prev.ts) return null // tick pertama: belum ada delta
+  const dt = (now - prev.ts) / 1000
+  // Counter reset (router reboot) → delta negatif → anggap 0.
+  return {
+    rx: (Math.max(0, rx - prev.rx) * 8) / dt,
+    tx: (Math.max(0, tx - prev.tx) * 8) / dt,
+  }
+}
+
 const is403 = (e: unknown) => e instanceof AxiosError && e.response?.status === 403
+
+// Field snapshot activeUsers (mapper backend) → bentuk yang dipakai RecentSales.
+type SnapshotActiveUser = {
+  username?: string
+  ipAddress?: string
+  macAddress?: string
+  uptime?: string
+}
 
 // Aggregates every dashboard metric in one pass. Never throws: a connection
 // failure surfaces as `isDisconnected`, an OWNER-restricted panel as
 // `isForbidden` — so the query always resolves with a metrics snapshot.
+// Data monitoring diambil via GET /monitoring/snapshot (1 request = 1 login
+// router untuk active+resources+traffic) — lihat desain/dashboard-ia-plan.md §7 D1.
 async function fetchDashboardMetrics(
   serverId: string,
   signal: AbortSignal
@@ -76,35 +120,44 @@ async function fetchDashboardMetrics(
     if (!is403(e)) metrics.isDisconnected = true
   }
 
-  // Traffic (allowed for all roles)
+  // Snapshot: active users + resources + traffic (TEKNISI/SUPER_ADMIN)
   try {
-    const tRes = await api.get(`/monitoring/traffic/${serverId}`, { signal })
-    metrics.interfaces = Array.isArray(tRes.data)
-      ? tRes.data.filter((i: { running?: boolean }) => i.running).length
-      : 0
+    const sRes = await api.get(`/monitoring/snapshot/${serverId}`, { signal })
+    const snap = sRes.data ?? {}
+    metrics.activeUsersList = ((snap.activeUsers ?? []) as SnapshotActiveUser[]).map(
+      (u) => ({
+        user: u.username,
+        address: u.ipAddress,
+        macAddress: u.macAddress,
+        uptime: u.uptime,
+      })
+    )
+    metrics.activeUsers = metrics.activeUsersList.length
+    metrics.resources = snap.resources ?? null
+    metrics.traffic = Array.isArray(snap.traffic) ? snap.traffic : []
+    metrics.trafficRate = computeTrafficRate(serverId, metrics.traffic)
   } catch (e) {
-    if (!is403(e)) metrics.isDisconnected = true
-  }
-
-  // Active users + resources (forbidden for OWNER)
-  try {
-    const [aRes, rRes] = await Promise.all([
-      api.get(`/monitoring/active/${serverId}`, { signal }),
-      api.get(`/monitoring/resources/${serverId}`, { signal }),
-    ])
-    metrics.activeUsers = aRes.data?.length || 0
-    metrics.activeUsersList = aRes.data || []
-    metrics.uptime = rRes.data?.uptime || '-'
-  } catch (e) {
-    if (is403(e)) metrics.isForbidden = true
-    else metrics.isDisconnected = true
+    if (is403(e)) {
+      // OWNER: snapshot terlarang — ambil traffic yang memang boleh OWNER.
+      metrics.isForbidden = true
+      try {
+        const tRes = await api.get(`/monitoring/traffic/${serverId}`, { signal })
+        metrics.traffic = Array.isArray(tRes.data) ? tRes.data : []
+        metrics.trafficRate = computeTrafficRate(serverId, metrics.traffic)
+      } catch (e2) {
+        if (!is403(e2)) metrics.isDisconnected = true
+      }
+    } else {
+      metrics.isDisconnected = true
+    }
   }
 
   return metrics
 }
 
 export function Dashboard() {
-  const { activeServerId, isLoading } = useServerStore()
+  const { activeServerId, isLoading, servers } = useServerStore()
+  const activeServer = servers.find((s) => s.id === activeServerId)
   const queryClient = useQueryClient()
   const [isRetrying, setIsRetrying] = useState(false)
 
@@ -160,7 +213,7 @@ export function Dashboard() {
       </Header>
 
       {/* ===== Main ===== */}
-      <Main>
+      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         {!isLoading && !activeServerId ? (
           <EmptyRouterPlaceholder />
         ) : isDisconnected ? (
@@ -170,8 +223,9 @@ export function Dashboard() {
           />
         ) : (
           <>
-            <div className='mb-2 flex items-center justify-between space-y-2'>
-              <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
+            <div className={`${outerBoxClass} flex-1`}>
+            <div className='flex items-center justify-between'>
+              <h1 className='text-2xl font-semibold tracking-tight'>Dashboard</h1>
           <div className='flex items-center space-x-2'>
             <Button onClick={() => syncMutation.mutate()} disabled={isSyncing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -197,8 +251,8 @@ export function Dashboard() {
             </TabsList>
           </div>
           <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <Card className={nestedCardClass}>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
                     User Aktif
@@ -223,7 +277,7 @@ export function Dashboard() {
                     </div>
                   ) : (
                     <>
-                      <div className='text-2xl font-bold'>{metrics.activeUsers}</div>
+                      <div className='text-2xl font-semibold tracking-tight tabular-nums'>{metrics.activeUsers}</div>
                       <p className='text-xs text-muted-foreground'>
                         pelanggan terhubung saat ini
                       </p>
@@ -231,7 +285,7 @@ export function Dashboard() {
                   )}
                 </CardContent>
               </Card>
-              <Card>
+              <Card className={nestedCardClass}>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
                     Voucher
@@ -252,72 +306,27 @@ export function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>{metrics.vouchers}</div>
+                  <div className='text-2xl font-semibold tracking-tight tabular-nums'>{metrics.vouchers}</div>
                   <p className='text-xs text-muted-foreground'>
                     total voucher dalam sistem
                   </p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Uptime Router</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  {metrics.isForbidden ? (
-                    <div className='flex items-center gap-2 text-sm text-muted-foreground font-medium'>
-                      <Lock className='h-4 w-4' /> Akses Khusus Teknisi
-                    </div>
-                  ) : (
-                    <>
-                      <div className='text-2xl font-bold'>{metrics.uptime}</div>
-                      <p className='text-xs text-muted-foreground'>
-                        waktu router menyala
-                      </p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Interface Aktif
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>{metrics.interfaces}</div>
-                  <p className='text-xs text-muted-foreground'>
-                    antarmuka jaringan berjalan
-                  </p>
-                </CardContent>
-              </Card>
             </div>
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-              <Card className='col-span-1 lg:col-span-7'>
+              <RouterHealthPanel
+                className={`col-span-1 lg:col-span-3 ${nestedCardClass}`}
+                resources={metrics.resources}
+                hasTraffic={metrics.traffic.length > 0}
+                trafficRate={metrics.trafficRate}
+                isForbidden={metrics.isForbidden}
+                isLive={!!metrics.resources}
+                host={activeServer?.host}
+                port={activeServer?.port}
+                lastStatus={activeServer?.lastStatus}
+                lastCheckedAt={activeServer?.lastCheckedAt}
+              />
+              <Card className={`col-span-1 lg:col-span-4 ${nestedCardClass}`}>
                 <CardHeader>
                   <CardTitle>Pengguna Aktif</CardTitle>
                   <CardDescription>
@@ -334,6 +343,7 @@ export function Dashboard() {
             <Analytics />
           </TabsContent>
         </Tabs>
+            </div>
         </>
         )}
       </Main>

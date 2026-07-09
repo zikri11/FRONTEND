@@ -298,7 +298,7 @@ export function ChatBubble() {
         >
           {step === 'welcome' ? (
             <div className='p-6'>
-              <h3 className='text-2xl font-bold tracking-tight mb-2'>
+              <h3 className='text-2xl font-semibold tracking-tight mb-2'>
                 Your always-on AI companion.
               </h3>
               <p className='text-sm text-gray-300 mb-6'>
@@ -502,7 +502,7 @@ export function ChatBubble() {
                                   <GlobeIcon className="h-3.5 w-3.5 opacity-80" />
                                   {s.name}
                                 </span>
-                                <span className={`text-[10px] mt-0.5 ${i === mentionState.index ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                                <span className={`font-mono text-[10px] mt-0.5 ${i === mentionState.index ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                                   {s.host}
                                 </span>
                               </div>

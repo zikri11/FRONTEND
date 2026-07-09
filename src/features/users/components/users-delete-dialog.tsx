@@ -55,10 +55,10 @@ export function UsersDeleteDialog({
         >
           <p className='mb-2'>
             Are you sure you want to delete{' '}
-            <span className='font-bold'>{currentRow.username}</span>?
+            <span className='font-semibold'>{currentRow.username}</span>?
             <br />
             This action will permanently remove the user with the role of{' '}
-            <span className='font-bold'>
+            <span className='font-semibold'>
               {currentRow.role.toUpperCase()}
             </span>{' '}
             from the system. This cannot be undone.

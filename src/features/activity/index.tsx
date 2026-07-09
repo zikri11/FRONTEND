@@ -30,9 +30,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { JsonViewer } from '@/components/json-viewer'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { useServerStore } from '@/stores/server-store'
 
 type ActivityLog = {
@@ -42,6 +48,14 @@ type ActivityLog = {
   entity?: string
   detail?: string
   server?: { name?: string }
+}
+
+// Truncation berbasis JUMLAH KATA (bukan CSS ellipsis / lebar elemen): >5 kata
+// → 5 kata pertama + '...'. Presentation only; teks penuh tetap ada (tooltip).
+function truncateWords(text: string, max = 5) {
+  const words = text.trim().split(/\s+/)
+  if (words.length <= max) return { text, truncated: false }
+  return { text: `${words.slice(0, max).join(' ')}...`, truncated: true }
 }
 
 export function ActivityHistory() {
@@ -99,9 +113,10 @@ export function ActivityHistory() {
           <EmptyRouterPlaceholder />
         ) : (
           <>
+            <div className={`${outerBoxClass} flex-1`}>
             <div className='flex flex-wrap items-start justify-between gap-2'>
               <div>
-                <h2 className='text-2xl font-bold tracking-tight'>Riwayat Aktivitas</h2>
+                <h2 className='text-2xl font-semibold tracking-tight'>Riwayat Aktivitas</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
                   Pantau log aktivitas sistem, audit transaksi POS, & status sinkronisasi router MikroTik.
                 </p>
@@ -109,7 +124,7 @@ export function ActivityHistory() {
           <Button variant='outline'>Ekspor Log</Button>
         </div>
 
-        <div className='mt-4 rounded-md border bg-background'>
+        <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
           <Table>
             <TableHeader className='bg-muted/50'>
               <TableRow>
@@ -145,6 +160,8 @@ export function ActivityHistory() {
               ) : (
                 activityLogs.map((log) => {
                   const action = log.action ?? ''
+                  const descFull = `${log.entity ? `[${log.entity}] ` : ''}${log.detail || '-'}`
+                  const desc = truncateWords(descFull)
                   return (
                   <TableRow key={log.id}>
                     <TableCell className='font-mono text-xs text-muted-foreground'>
@@ -153,16 +170,27 @@ export function ActivityHistory() {
                     <TableCell>
                       <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
                         action.startsWith('CREATE') || action.startsWith('ADD') || action.startsWith('SYNC') || action.endsWith('CREATED')
-                          ? 'bg-green-500/10 text-green-400 ring-green-500/20'
+                          ? 'bg-success/10 text-success ring-success/20'
                           : action.startsWith('DELETE') || action.endsWith('DELETED') || action.includes('FAILED')
-                          ? 'bg-red-500/10 text-red-400 ring-red-500/20'
-                          : 'bg-blue-500/10 text-blue-400 ring-blue-500/20'
+                          ? 'bg-error/10 text-error ring-error/20'
+                          : 'bg-info/10 text-info ring-info/20'
                       }`}>
                         {action || '-'}
                       </span>
                     </TableCell>
-                    <TableCell className='font-medium max-w-[300px] truncate sm:max-w-none'>
-                      {log.entity ? `[${log.entity}] ` : ''}{log.detail || '-'}
+                    <TableCell className='font-medium max-w-[300px] sm:max-w-none'>
+                      {desc.truncated ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className='cursor-default'>{desc.text}</span>
+                          </TooltipTrigger>
+                          <TooltipContent className='max-w-sm'>
+                            {descFull}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        descFull
+                      )}
                     </TableCell>
                     <TableCell className='text-muted-foreground'>{log.server?.name || '-'}</TableCell>
                     <TableCell className='text-right'>
@@ -186,6 +214,7 @@ export function ActivityHistory() {
             </TableBody>
           </Table>
         </div>
+        </div>
         </>
         )}
       </Main>
@@ -205,7 +234,7 @@ export function ActivityHistory() {
             <div className='flex items-center gap-1 pe-6'>
               <Button variant='ghost' size='sm' className='h-8 gap-1.5 text-xs' onClick={copyJson}>
                 {copied ? (
-                  <Check className='h-3.5 w-3.5 text-emerald-500' />
+                  <Check className='h-3.5 w-3.5 text-success' />
                 ) : (
                   <Copy className='h-3.5 w-3.5' />
                 )}

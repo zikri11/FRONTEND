@@ -86,7 +86,7 @@ export function BillingUpgradeDialog({ open, onOpenChange }: BillingUpgradeDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Pilih Paket Anda</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold tracking-tight">Pilih Paket Anda</DialogTitle>
           <DialogDescription>
             Pilih paket yang paling sesuai dengan kebutuhan jaringan Anda.
           </DialogDescription>
@@ -123,13 +123,13 @@ export function BillingUpgradeDialog({ open, onOpenChange }: BillingUpgradeDialo
                       </div>
                     )}
                     
-                    <h3 className="text-xl font-semibold text-foreground">{plan.name}</h3>
+                    <h3 className="text-xl font-semibold tracking-tight text-foreground">{plan.name}</h3>
                     <p className="mt-2 text-muted-foreground text-sm">
                       {plan.code === 'FREE' ? 'Untuk uji coba ringan.' : 'Untuk kebutuhan bisnis.'}
                     </p>
                     
                     <div className="my-6 flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-foreground">
+                      <span className="text-3xl font-semibold tracking-tighter text-foreground">
                         {formatRupiah(plan.price)}
                       </span>
                       {plan.price > 0 && (

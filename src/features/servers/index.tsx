@@ -43,6 +43,7 @@ import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
 import { useServerStore } from '@/stores/server-store'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 
 function StatusBadge({ status }: { status: string }) {
   const label = status
@@ -50,7 +51,7 @@ function StatusBadge({ status }: { status: string }) {
     : 'Unknown'
   if (status === 'ONLINE') {
     return (
-      <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
+      <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
         {label}
       </Badge>
     )
@@ -63,7 +64,7 @@ function StatusBadge({ status }: { status: string }) {
     )
   }
   return (
-    <Badge size='sm' className='border-yellow-500/20 bg-yellow-500/10 text-yellow-500'>
+    <Badge size='sm' className='border-warning/20 bg-warning/10 text-warning'>
       {label}
     </Badge>
   )
@@ -115,9 +116,12 @@ export function Servers() {
       </Header>
 
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+        {/* flex-1: card fills the remaining viewport height (empty space stays
+            inside the card, below the table) yet grows past it when rows overflow */}
+        <div className={`${outerBoxClass} flex-1`}>
         <div className='flex flex-wrap items-start justify-between gap-2'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Server Router</h2>
+            <h2 className='text-2xl font-semibold tracking-tight'>Server Router</h2>
             <p className='text-sm text-muted-foreground mt-1'>
               Kelola koneksi multi-server MikroTik, uji latensi API, & atur kredensial.
             </p>
@@ -127,7 +131,7 @@ export function Servers() {
           </Button>
         </div>
 
-        <div className='mt-4 rounded-md border bg-background'>
+        <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
           <Table>
             <TableHeader className='bg-muted/50'>
               <TableRow>
@@ -173,7 +177,7 @@ export function Servers() {
                       <Badge size='sm' variant='secondary' className='gap-1 font-normal text-muted-foreground'>
                         {server.useSSL ? (
                           <>
-                            <ShieldCheck className='text-green-500' /> HTTPS / SSL
+                            <ShieldCheck className='text-success' /> HTTPS / SSL
                           </>
                         ) : (
                           <>
@@ -212,6 +216,7 @@ export function Servers() {
               )}
             </TableBody>
           </Table>
+        </div>
         </div>
 
         <AlertDialog open={!!serverToDelete} onOpenChange={(open) => !open && setServerToDelete(null)}>

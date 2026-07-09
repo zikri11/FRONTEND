@@ -220,7 +220,7 @@ export function EditRouter() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div className='flex flex-wrap items-start justify-between gap-2'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Edit Router</h2>
+            <h2 className='text-2xl font-semibold tracking-tight'>Edit Router</h2>
             <p className='text-sm text-muted-foreground mt-1'>
               Perbarui konfigurasi API port dan kredensial router MikroTik Anda.
             </p>
@@ -393,7 +393,7 @@ export function EditRouter() {
                   {isTesting ? 'Sedang Tes...' : 'Uji Koneksi Router'}
                 </Button>
                 {testResult && (
-                  <span className={`text-sm font-medium ${testResult.status === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className={`text-sm font-medium ${testResult.status === 'success' ? 'text-success' : 'text-error'}`}>
                     {testResult.message}
                   </span>
                 )}

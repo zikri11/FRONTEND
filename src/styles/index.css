@@ -10,7 +10,11 @@
 }
 
 @theme {
-  --font-inter: 'Inter', sans-serif;
+  /* Geist Sans + Geist Mono (Fontsource variable) — satu-satunya font UI dashboard */
+  --font-sans:
+    'Geist Variable', 'Inter', system-ui, Arial, sans-serif;
+  --font-mono:
+    'Geist Mono Variable', ui-monospace, 'JetBrains Mono', Consolas, monospace;
   --font-nacelle: 'Nacelle', sans-serif;
 
   --animate-shine: shine 5s ease-in-out 500ms infinite;
@@ -166,4 +170,35 @@
   to {
     height: 0;
   }
+}
+
+/* Variabel pendukung ReUI (badge/frame). Token semantic utama
+   (--success/--error/--warning/--info) didefinisikan di theme.css —
+   JANGAN dideklarasikan ulang di sini (CLI ReUI pernah menimpanya). */
+:root {
+  --destructive-foreground: var(--color-red-800);
+  --success-foreground: #ffffff;
+  --info-foreground: #ffffff;
+  --warning-foreground: #ffffff;
+  --invert: var(--color-zinc-900);
+  --invert-foreground: var(--color-zinc-50);
+}
+
+.dark {
+  --destructive-foreground: var(--color-red-600);
+  /* Semantic dark = warna terang (#4ade80 dst.) → teks solid harus gelap */
+  --success-foreground: #171717;
+  --info-foreground: #171717;
+  --warning-foreground: #171717;
+  --invert: var(--color-zinc-700);
+  --invert-foreground: var(--color-zinc-50);
+}
+
+@theme inline {
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success-foreground: var(--success-foreground);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-invert: var(--invert);
+  --color-invert-foreground: var(--invert-foreground);
 }

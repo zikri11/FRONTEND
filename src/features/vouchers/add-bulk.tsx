@@ -179,7 +179,7 @@ export function AddBulkVoucher() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div className='flex flex-wrap items-start justify-between gap-2'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Buat Voucher Massal</h2>
+            <h2 className='text-2xl font-semibold tracking-tight'>Buat Voucher Massal</h2>
             <p className='text-sm text-muted-foreground mt-1'>
               Generate ratusan kode voucher secara instan dalam satu langkah.
             </p>

@@ -58,6 +58,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { toast } from 'sonner'
 
 type Voucher = {
@@ -205,9 +206,10 @@ export function Vouchers() {
           <EmptyRouterPlaceholder />
         ) : (
           <>
+            <div className={`${outerBoxClass} flex-1`}>
             <div className='flex flex-wrap items-start justify-between gap-2'>
               <div>
-                <h2 className='text-2xl font-bold tracking-tight'>Voucher Hotspot</h2>
+                <h2 className='text-2xl font-semibold tracking-tight'>Voucher Hotspot</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
                   Buat voucher instan & massal di {activeServer?.name || activeServer?.host || 'router ini'}.
                 </p>
@@ -262,7 +264,7 @@ export function Vouchers() {
           <TabsContent value="list" className="space-y-4">
             {/* Info Cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
+          <Card className={nestedCardClass}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Total Voucher
@@ -270,27 +272,27 @@ export function Vouchers() {
               <TicketIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalVouchers}</div>
+              <div className="text-2xl font-semibold tracking-tight tabular-nums">{totalVouchers}</div>
               <p className="text-xs text-muted-foreground">
                 Total di router ini
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={nestedCardClass}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Belum Dipakai
               </CardTitle>
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+              <CheckCircleIcon className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{unusedVouchers}</div>
+              <div className="text-2xl font-semibold tracking-tight tabular-nums">{unusedVouchers}</div>
               <p className="text-xs text-muted-foreground">
                 {totalVouchers > 0 ? Math.round((unusedVouchers/totalVouchers)*100) : 0}% dari total voucher
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={nestedCardClass}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Terpakai
@@ -298,7 +300,7 @@ export function Vouchers() {
               <XCircleIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{usedVouchers}</div>
+              <div className="text-2xl font-semibold tracking-tight tabular-nums">{usedVouchers}</div>
               <p className="text-xs text-muted-foreground">
                 {totalVouchers > 0 ? Math.round((usedVouchers/totalVouchers)*100) : 0}% dari total voucher
               </p>
@@ -343,7 +345,7 @@ export function Vouchers() {
           </div>
         )}
 
-        <div className='rounded-md border bg-background'>
+        <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
           <Table>
             <TableHeader className='bg-muted/50'>
               <TableRow>
@@ -405,7 +407,7 @@ export function Vouchers() {
                           <TicketIcon className='text-muted-foreground size-4' aria-hidden='true' />
                         </div>
                         <div className='flex flex-col'>
-                          <span className='text-sm font-medium'>{row.username || row.kode}</span>
+                          <span className='font-mono text-sm font-medium'>{row.username || row.kode}</span>
                           <span className='text-muted-foreground font-mono text-xs'>{row.password}</span>
                         </div>
                       </div>
@@ -414,7 +416,7 @@ export function Vouchers() {
                     <TableCell>{row.outletName || row.outlet || '-'}</TableCell>
                     <TableCell>
                       {row.status === "UNUSED" || row.status === "Aktif" ? (
-                        <Badge size='sm' className='border-emerald-500/20 bg-emerald-500/10 text-emerald-500'>
+                        <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
                           Aktif
                         </Badge>
                       ) : row.status === "USED" || row.status === "Terpakai" ? (
@@ -422,7 +424,7 @@ export function Vouchers() {
                           Terpakai
                         </Badge>
                       ) : (
-                        <Badge size='sm' className='border-red-500/20 bg-red-500/10 text-red-500'>
+                        <Badge size='sm' className='border-error/20 bg-error/10 text-error'>
                           {row.status}
                         </Badge>
                       )}
@@ -498,7 +500,7 @@ export function Vouchers() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
-            <Card className="flex flex-col">
+            <Card className={`flex flex-col ${nestedCardClass}`}>
               <CardHeader className="items-center pb-0">
                 <CardTitle>Rasio Pemakaian Voucher</CardTitle>
                 <CardDescription>Bulan Ini (Juni 2026)</CardDescription>
@@ -532,6 +534,7 @@ export function Vouchers() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
         {/* Alert Dialog Hapus Satuan */}
         <AlertDialog open={!!voucherToDelete} onOpenChange={(open) => !open && setVoucherToDelete(null)}>
           <AlertDialogContent>

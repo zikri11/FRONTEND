@@ -1,16 +1,22 @@
 import { useState } from 'react'
-import { Upload, Download, Users, Tag, MoreHorizontalIcon, RefreshCw, Gauge } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
-import { Button } from '@/components/ui/button'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Upload,
+  Download,
+  Users,
+  Tag,
+  MoreHorizontalIcon,
+  RefreshCw,
+  Gauge,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
+import { useServerStore } from '@/stores/server-store'
+import { api } from '@/lib/axios'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+import { qk } from '@/lib/query-keys'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +26,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -29,21 +43,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/reui/badge'
+import { ConfigDrawer } from '@/components/config-drawer'
+import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Badge } from '@/components/reui/badge'
+import { RouterLoadingOverlay } from '@/components/router-loading-overlay'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { ConfigDrawer } from '@/components/config-drawer'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-
-import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
-import { useServerStore } from '@/stores/server-store'
-import { useAuthStore } from '@/stores/auth-store'
-import { api } from '@/lib/axios'
-import { qk } from '@/lib/query-keys'
-import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
-import { toast } from 'sonner'
 
 type HotspotProfile = {
   id: string
@@ -133,156 +141,213 @@ export function Profiles() {
         ) : (
           <>
             <div className={`${outerBoxClass} flex-1`}>
-            <div className='flex flex-wrap items-start justify-between gap-2'>
-              <div>
-                <h2 className='text-2xl font-semibold tracking-tight'>Profil Hotspot</h2>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Kelola paket bandwidth & masa aktif router Anda.
-                </p>
-              </div>
-              {!isOwner && (
-                <div className='flex gap-2'>
-                  <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                    {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
-                  </Button>
-                  <Button asChild>
-                    <Link to='/profiles/add'>Buat Profil</Link>
-                  </Button>
+              <div className='flex flex-wrap items-start justify-between gap-2'>
+                <div>
+                  <h2 className='text-2xl font-semibold tracking-tight'>
+                    Profil Hotspot
+                  </h2>
+                  <p className='mt-1 text-sm text-muted-foreground'>
+                    Kelola paket bandwidth & masa aktif router Anda.
+                  </p>
                 </div>
-              )}
+                {!isOwner && (
+                  <div className='flex gap-2'>
+                    <Button
+                      variant='outline'
+                      onClick={() => syncMutation.mutate()}
+                      disabled={isSyncing}
+                    >
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+                      />
+                      {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
+                    </Button>
+                    <Button asChild>
+                      <Link to='/profiles/add'>Buat Profil</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div
+                className={`relative overflow-hidden rounded-xl border ${nestedCardClass}`}
+              >
+                <RouterLoadingOverlay show={isPending} />
+                <Table>
+                  <TableHeader className='bg-muted/50'>
+                    <TableRow>
+                      <TableHead>Profil</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Bandwidth</TableHead>
+                      <TableHead>Shared</TableHead>
+                      <TableHead>Masa Aktif</TableHead>
+                      <TableHead className='text-right'>Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isError ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className='py-6 text-center'>
+                          <p className='text-muted-foreground'>
+                            Gagal memuat data profil.
+                          </p>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className='mt-2'
+                            onClick={() => refetch()}
+                          >
+                            Coba Lagi
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ) : profiles.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className='py-6 text-center text-muted-foreground'
+                        >
+                          Belum ada profil hotspot.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      profiles.map((profile) => {
+                        const [up, down] = (profile.rateLimit || '').split('/')
+                        return (
+                          <TableRow key={profile.id}>
+                            <TableCell>
+                              <div className='flex items-center gap-3'>
+                                <div className='flex size-9 shrink-0 items-center justify-center rounded-sm bg-muted'>
+                                  <Gauge
+                                    className='size-4 text-muted-foreground'
+                                    aria-hidden='true'
+                                  />
+                                </div>
+                                <div className='flex flex-col'>
+                                  <span className='text-sm font-medium'>
+                                    {profile.name}
+                                  </span>
+                                  <span className='text-xs text-muted-foreground'>
+                                    {profile.description ||
+                                      'Diimpor otomatis dari router MikroTik'}
+                                  </span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {profile.syncedToRouter ? (
+                                <Badge
+                                  size='sm'
+                                  className='border-success/20 bg-success/10 text-success'
+                                >
+                                  Sinkron
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  size='sm'
+                                  className='border-warning/20 bg-warning/10 text-warning'
+                                >
+                                  Belum Sinkron
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className='flex items-center gap-2 text-sm font-semibold'>
+                                <span className='flex items-center'>
+                                  <Upload className='mr-1 h-3.5 w-3.5 text-muted-foreground' />{' '}
+                                  {up || '-'}
+                                </span>
+                                <span className='font-normal text-muted-foreground'>
+                                  /
+                                </span>
+                                <span className='flex items-center'>
+                                  <Download className='mr-1 h-3.5 w-3.5 text-muted-foreground' />{' '}
+                                  {down || '-'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className='flex items-center text-sm font-semibold'>
+                                <Users className='mr-1.5 h-3.5 w-3.5 text-muted-foreground' />{' '}
+                                {profile.sharedUsers || 1}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className='flex items-center text-sm font-semibold'>
+                                <Tag className='mr-1.5 h-3.5 w-3.5 text-muted-foreground' />{' '}
+                                {profile.validity || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className='text-right'>
+                              {!isOwner && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant='ghost'
+                                      size='icon'
+                                      className='size-8'
+                                    >
+                                      <MoreHorizontalIcon />
+                                      <span className='sr-only'>Buka menu</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align='end'>
+                                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      Duplikat
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      variant='destructive'
+                                      onClick={() =>
+                                        setProfileToDelete(profile.id)
+                                      }
+                                    >
+                                      Hapus
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
-        <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
-          <Table>
-            <TableHeader className='bg-muted/50'>
-              <TableRow>
-                <TableHead>Profil</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Bandwidth</TableHead>
-                <TableHead>Shared</TableHead>
-                <TableHead>Masa Aktif</TableHead>
-                <TableHead className='text-right'>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isPending ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                    Memuat data profil...
-                  </TableCell>
-                </TableRow>
-              ) : isError ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
-                    <p className="text-muted-foreground">Gagal memuat data profil.</p>
-                    <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
-                      Coba Lagi
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : profiles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                    Belum ada profil hotspot.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                profiles.map((profile) => {
-                  const [up, down] = (profile.rateLimit || '').split('/')
-                  return (
-                    <TableRow key={profile.id}>
-                      <TableCell>
-                        <div className='flex items-center gap-3'>
-                          <div className='bg-muted rounded-sm flex size-9 shrink-0 items-center justify-center'>
-                            <Gauge className='text-muted-foreground size-4' aria-hidden='true' />
-                          </div>
-                          <div className='flex flex-col'>
-                            <span className='text-sm font-medium'>{profile.name}</span>
-                            <span className='text-muted-foreground text-xs'>
-                              {profile.description || 'Diimpor otomatis dari router MikroTik'}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {profile.syncedToRouter ? (
-                          <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
-                            Sinkron
-                          </Badge>
-                        ) : (
-                          <Badge size='sm' className='border-warning/20 bg-warning/10 text-warning'>
-                            Belum Sinkron
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex items-center gap-2 text-sm font-semibold'>
-                          <span className='flex items-center'><Upload className='h-3.5 w-3.5 mr-1 text-muted-foreground' /> {up || '-'}</span>
-                          <span className='text-muted-foreground font-normal'>/</span>
-                          <span className='flex items-center'><Download className='h-3.5 w-3.5 mr-1 text-muted-foreground' /> {down || '-'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex items-center text-sm font-semibold'>
-                          <Users className='h-3.5 w-3.5 mr-1.5 text-muted-foreground' /> {profile.sharedUsers || 1}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex items-center text-sm font-semibold'>
-                          <Tag className='h-3.5 w-3.5 mr-1.5 text-muted-foreground' /> {profile.validity || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell className='text-right'>
-                        {!isOwner && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant='ghost' size='icon' className='size-8'>
-                                <MoreHorizontalIcon />
-                                <span className='sr-only'>Buka menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end'>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Duplikat</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem variant='destructive' onClick={() => setProfileToDelete(profile.id)}>
-                                Hapus
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        </div>
-
-        <AlertDialog open={!!profileToDelete} onOpenChange={(open) => !open && setProfileToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Hapus Profil Hotspot?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tindakan ini tidak dapat dibatalkan. Profil hotspot ini akan dihapus secara permanen dari sistem dan dari router MikroTik Anda.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setProfileToDelete(null)}>Batal</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => profileToDelete && deleteMutation.mutate(profileToDelete)}
-                disabled={deleteMutation.isPending}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Hapus Profil
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        </>
+            <AlertDialog
+              open={!!profileToDelete}
+              onOpenChange={(open) => !open && setProfileToDelete(null)}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Hapus Profil Hotspot?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tindakan ini tidak dapat dibatalkan. Profil hotspot ini akan
+                    dihapus secara permanen dari sistem dan dari router MikroTik
+                    Anda.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setProfileToDelete(null)}>
+                    Batal
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() =>
+                      profileToDelete && deleteMutation.mutate(profileToDelete)
+                    }
+                    disabled={deleteMutation.isPending}
+                    className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  >
+                    Hapus Profil
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
       </Main>
     </>

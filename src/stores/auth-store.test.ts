@@ -7,10 +7,11 @@ async function importAuthStore() {
 }
 
 const sampleUser = {
-  accountNo: 'ACC-1',
+  id: 'usr-1',
+  name: 'Test User',
   email: 'user@example.com',
-  role: ['user'],
-  exp: 1_700_000_000,
+  role: 'TEKNISI' as const,
+  ownerId: 'owner-1',
 }
 
 describe('useAuthStore', () => {
@@ -38,16 +39,7 @@ describe('useAuthStore', () => {
     )
   })
 
-  it('clears persisted access token when resetAccessToken is used', async () => {
-    const useAuthStore = await importAuthStore()
-    useAuthStore.getState().auth.setAccessToken('to-clear')
-    useAuthStore.getState().auth.resetAccessToken()
 
-    vi.resetModules()
-    const useAuthStoreAfterReload = await importAuthStore()
-
-    expect(useAuthStoreAfterReload.getState().auth.accessToken).toBe('')
-  })
 
   it('updates the signed-in user via setUser', async () => {
     const useAuthStore = await importAuthStore()

@@ -1,6 +1,11 @@
 import * as React from 'react'
 import { AxiosError } from 'axios'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   MoreHorizontalIcon,
@@ -156,6 +161,7 @@ export function Vouchers() {
         })
         .then((res) => res.data),
     enabled: !!activeServerId,
+    placeholderData: keepPreviousData,
   })
 
   const { data: profiles = [] } = useQuery<{ id: string; name: string }[]>({

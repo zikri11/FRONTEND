@@ -4,10 +4,7 @@ import {
   MessageCircleDashedIcon,
   Send,
   PlusIcon,
-  ImageIcon,
-  TelescopeIcon,
   GlobeIcon,
-  PaperclipIcon,
   MessageSquareIcon,
   Trash2Icon,
   PanelRight,
@@ -55,13 +52,22 @@ type Message = {
   id: string
   role: 'user' | 'assistant'
   content: string
+  provider?: string
 }
+
+const AI_PROVIDERS = [
+  { value: "gemini", label: "Gemini", color: "bg-blue-500", shadow: "shadow-[0_0_8px_rgba(59,130,246,0.5)]" },
+  { value: "openai", label: "OpenAI", color: "bg-emerald-500", shadow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
+  { value: "anthropic", label: "Anthropic", color: "bg-orange-500", shadow: "shadow-[0_0_8px_rgba(249,115,22,0.5)]" },
+  { value: "openrouter", label: "OpenRouter", color: "bg-indigo-500", shadow: "shadow-[0_0_8px_rgba(99,102,241,0.5)]" },
+]
 
 export function Chats() {
   const { activeServerId, servers, fetchServers } = useServerStore()
   const [sessions, setSessions] = useState<any[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [activeMessages, setActiveMessages] = useState<Message[]>([])
+  const [selectedProvider, setSelectedProvider] = useState<string>('gemini')
 
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
@@ -154,7 +160,7 @@ export function Chats() {
     setIsSending(true)
 
     try {
-      const payload: any = { question }
+      const payload: any = { question, provider: selectedProvider }
       
       if (activeSessionId && activeSessionId !== 'new') {
         payload.sessionId = activeSessionId
@@ -179,7 +185,8 @@ export function Chats() {
       const replyMessage: Message = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant', 
-        content: res.data.answer 
+        content: res.data.answer,
+        provider: res.data.provider || selectedProvider
       }
       setActiveMessages(prev => [...prev, replyMessage])
 
@@ -420,6 +427,12 @@ export function Chats() {
                         </div>
                         {msg.role === 'assistant' && (
                           <div className="flex items-center gap-1 pl-11 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {msg.provider && (
+                              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mr-2 border border-border/50 bg-muted/30 px-2 py-0.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                                <span className={`h-1.5 w-1.5 rounded-full ${AI_PROVIDERS.find(p => p.value === msg.provider)?.color || 'bg-primary'}`}></span>
+                                Dijawab oleh: {msg.provider}
+                              </span>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -495,15 +508,29 @@ export function Chats() {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" size="icon" variant="ghost" className="shrink-0 rounded-full h-12 w-12 hover:bg-muted">
-                        <PlusIcon className="h-5 w-5" />
+                      <Button type="button" size="icon" variant="outline" className="shrink-0 rounded-full h-12 w-12 border border-border/40 bg-background/50 backdrop-blur-sm shadow-sm hover:bg-accent/50 hover:border-accent/80 hover:shadow-md transition-all duration-300 relative group overflow-hidden">
+                        <Bot className="h-[22px] w-[22px] text-foreground/70 group-hover:text-foreground group-hover:scale-110 transition-all duration-300" />
+                        <span className={`absolute bottom-[10px] right-[10px] h-2.5 w-2.5 rounded-full border-[1.5px] border-background transition-all duration-300 ${AI_PROVIDERS.find(p => p.value === selectedProvider)?.color || 'bg-primary'} ${AI_PROVIDERS.find(p => p.value === selectedProvider)?.shadow || ''}`}></span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="top" className="w-56 p-2">
-                      <DropdownMenuItem className="py-2.5 cursor-pointer"><PaperclipIcon className="mr-3 h-4 w-4 text-muted-foreground" /> Unggah Foto & File</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="py-2.5 cursor-pointer"><ImageIcon className="mr-3 h-4 w-4 text-muted-foreground" /> Generate Script</DropdownMenuItem>
-                      <DropdownMenuItem className="py-2.5 cursor-pointer"><TelescopeIcon className="mr-3 h-4 w-4 text-muted-foreground" /> Analisis Mendalam</DropdownMenuItem>
+                    <DropdownMenuContent align="start" side="top" className="w-56 p-1.5 rounded-2xl border border-border/40 bg-background/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=top]:slide-in-from-bottom-2">
+                      <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Pilih AI Provider
+                      </div>
+                      <DropdownMenuSeparator className="bg-border/30 mx-1 mb-1" />
+                      {AI_PROVIDERS.map((provider) => (
+                        <DropdownMenuItem 
+                          key={provider.value} 
+                          className={`px-3 py-2.5 cursor-pointer flex justify-between items-center rounded-xl transition-all duration-200 focus:bg-transparent ${selectedProvider === provider.value ? 'bg-primary/10 text-primary font-medium shadow-sm' : 'hover:bg-muted/60 text-foreground/80'}`} 
+                          onClick={() => setSelectedProvider(provider.value)}
+                        >
+                          <span className="flex items-center gap-3">
+                            <span className={`h-2.5 w-2.5 rounded-full ${provider.color} ${selectedProvider === provider.value ? provider.shadow : ''}`}></span>
+                            {provider.label}
+                          </span>
+                          {selectedProvider === provider.value && <Check className="h-4 w-4 text-primary" />}
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Textarea

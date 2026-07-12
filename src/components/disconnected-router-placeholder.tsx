@@ -13,9 +13,9 @@ export function DisconnectedRouterPlaceholder({ onRetry, isRetrying }: Disconnec
         <WifiOff className="h-10 w-10 text-destructive" />
       </div>
       <div className="max-w-md space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Koneksi Router Terputus</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Router Sementara Terputus</h2>
         <p className="text-sm text-muted-foreground">
-          Sistem gagal terhubung ke router MikroTik Anda. Pastikan router dalam keadaan menyala, terhubung ke internet, dan konfigurasi API Port sudah benar.
+          Sistem gagal terhubung ke router MikroTik Anda. Kami akan mencoba menghubungkan ulang secara otomatis, atau Anda dapat menekan tombol di bawah.
         </p>
       </div>
       <Button 

@@ -52,6 +52,7 @@ type DashboardMetrics = {
   trafficRate: { rx: number; tx: number } | null
   isForbidden: boolean
   isDisconnected: boolean
+  isNotFound: boolean
 }
 
 const EMPTY_METRICS: DashboardMetrics = {
@@ -63,6 +64,7 @@ const EMPTY_METRICS: DashboardMetrics = {
   trafficRate: null,
   isForbidden: false,
   isDisconnected: false,
+  isNotFound: false,
 }
 
 // Counter kumulatif tick sebelumnya per router — untuk menghitung rate trafik
@@ -92,6 +94,7 @@ function computeTrafficRate(
 }
 
 const is403 = (e: unknown) => e instanceof AxiosError && e.response?.status === 403
+const is404 = (e: unknown) => e instanceof AxiosError && e.response?.status === 404
 
 // Field snapshot activeUsers (mapper backend) → bentuk yang dipakai RecentSales.
 type SnapshotActiveUser = {
@@ -114,8 +117,8 @@ async function fetchDashboardMetrics(
 
   // Vouchers (allowed for all roles)
   try {
-    const vRes = await api.get('/vouchers', { params: { serverId }, signal })
-    metrics.vouchers = vRes.data?.length || 0
+    const vRes = await api.get('/vouchers', { params: { serverId, take: 1 }, signal })
+    metrics.vouchers = vRes.data?.meta?.total || 0
   } catch (e) {
     if (!is403(e)) metrics.isDisconnected = true
   }
@@ -145,8 +148,11 @@ async function fetchDashboardMetrics(
         metrics.traffic = Array.isArray(tRes.data) ? tRes.data : []
         metrics.trafficRate = computeTrafficRate(serverId, metrics.traffic)
       } catch (e2) {
-        if (!is403(e2)) metrics.isDisconnected = true
+        if (is404(e2)) metrics.isNotFound = true
+        else if (!is403(e2)) metrics.isDisconnected = true
       }
+    } else if (is404(e)) {
+      metrics.isNotFound = true
     } else {
       metrics.isDisconnected = true
     }
@@ -216,6 +222,11 @@ export function Dashboard() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         {!isLoading && !activeServerId ? (
           <EmptyRouterPlaceholder />
+        ) : metrics.isNotFound ? (
+          <div className="flex flex-col items-center justify-center flex-1 py-20 text-center">
+            <h2 className="text-xl font-semibold mb-2">Router Tidak Ditemukan</h2>
+            <p className="text-muted-foreground">Router ini mungkin telah dihapus atau Anda tidak memiliki akses.</p>
+          </div>
         ) : isDisconnected ? (
           <DisconnectedRouterPlaceholder
             onRetry={handleRetry}

@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { ChevronsUpDown, Plus, Server, ServerOff } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import {
@@ -38,10 +37,10 @@ export function TeamSwitcher() {
               </div>
               <div className='grid flex-1 text-start text-sm leading-tight'>
                 <span className='truncate font-semibold'>
-                  {activeServer ? activeServer.host : 'Belum ada router'}
+                  {activeServer ? activeServer.name : 'Belum ada router'}
                 </span>
                 <span className='truncate text-xs'>
-                  {activeServer ? activeServer.username : 'Pilih / Tambah Router'}
+                  {activeServer ? activeServer.host : 'Pilih / Tambah Router'}
                 </span>
               </div>
               <ChevronsUpDown className='ms-auto' />
@@ -66,7 +65,10 @@ export function TeamSwitcher() {
                   <div className='flex size-6 items-center justify-center rounded-sm border'>
                     <Server className='size-4 shrink-0' />
                   </div>
-                  {server.host} ({server.username})
+                  <div className='grid flex-1 leading-tight'>
+                    <span className='truncate text-sm font-medium'>{server.name}</span>
+                    <span className='truncate text-xs text-muted-foreground'>{server.host}</span>
+                  </div>
                   <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
                 </DropdownMenuItem>
               ))

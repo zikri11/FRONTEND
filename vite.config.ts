@@ -22,6 +22,15 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
+      // Engine.IO path socket.io-client (default `/socket.io`) — dipakai
+      // useMonitoringSocket buat konek namespace `/monitoring` di backend.
+      // Tanpa ini origin-nya jatuh ke dev server sendiri (lihat getSocketOrigin)
+      // dan tak pernah nyampai backend.
+      '/socket.io': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
   resolve: {

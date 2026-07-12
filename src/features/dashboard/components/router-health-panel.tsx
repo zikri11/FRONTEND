@@ -34,6 +34,24 @@ export type TrafficInterface = {
   disabled?: boolean
 }
 
+// Bentuk UI (dipakai RecentSales) — hasil mapping dari SnapshotActiveUser.
+export type ActiveUser = {
+  user?: string
+  name?: string
+  address?: string
+  macAddress?: string
+  uptime?: string
+}
+
+// Field snapshot activeUsers mentah dari backend (REST /monitoring/snapshot
+// maupun event WebSocket `snapshot` — bentuknya sama).
+export type SnapshotActiveUser = {
+  username?: string
+  ipAddress?: string
+  macAddress?: string
+  uptime?: string
+}
+
 type Props = {
   resources: RouterResources | null
   /** Ada data traffic di tick ini (rate mungkin masih dihitung di tick pertama). */
@@ -44,6 +62,8 @@ type Props = {
   isForbidden: boolean
   /** Snapshot terakhir berhasil = router terjangkau sekarang (status live). */
   isLive: boolean
+  /** Mode transport data monitoring saat ini (WS live/connecting, atau REST polling). */
+  liveMode?: 'live' | 'polling' | 'connecting'
   host?: string
   port?: number
   /** Status tersimpan dari /servers — fallback saat tidak ada sinyal live. */
@@ -106,6 +126,36 @@ function UsageBar({ pct, label }: { pct: number; label: string }) {
   )
 }
 
+// Badge transport data monitoring — terpisah dari `isLive` (yang berarti
+// "ada data resource"), ini soal jalur data: WS live/connecting atau REST polling.
+// function LiveModeBadge({ mode }: { mode: 'live' | 'polling' | 'connecting' }) {
+//   const dotClass =
+//     mode === 'live'
+//       ? 'bg-success'
+//       : mode === 'connecting'
+//         ? 'bg-warning'
+//         : 'bg-muted-foreground'
+//   const label =
+//     mode === 'live' ? 'Live' : mode === 'connecting' ? 'Menghubungkan...' : 'Polling'
+//   const textClass =
+//     mode === 'live'
+//       ? 'text-success'
+//       : mode === 'connecting'
+//         ? 'text-warning'
+//         : 'text-muted-foreground'
+//   return (
+//     <span className='flex items-center gap-1.5'>
+//       <span className='relative flex size-2'>
+//         {mode === 'live' && (
+//           <span className='absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75' />
+//         )}
+//         <span className={`relative inline-flex size-2 rounded-full ${dotClass}`} />
+//       </span>
+//       <span className={`text-xs font-medium ${textClass}`}>{label}</span>
+//     </span>
+//   )
+// }
+
 function HealthRow({
   label,
   children,
@@ -135,6 +185,7 @@ export function RouterHealthPanel({
   trafficRate,
   isForbidden,
   isLive,
+  // liveMode,
   host,
   port,
   lastStatus,
@@ -162,7 +213,10 @@ export function RouterHealthPanel({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Router Details</CardTitle>
+        <div className='flex items-center justify-between gap-2'>
+          <CardTitle>Router Details</CardTitle>
+          {/* {liveMode && <LiveModeBadge mode={liveMode} />} */}
+        </div>
         <CardDescription>Kondisi perangkat saat ini</CardDescription>
       </CardHeader>
       <CardContent>

@@ -19,34 +19,30 @@ import { RecentSales } from './components/recent-sales'
 import { ChatBubble } from './components/chat-bubble'
 import {
   RouterHealthPanel,
+  type ActiveUser,
   type RouterResources,
+  type SnapshotActiveUser,
   type TrafficInterface,
 } from './components/router-health-panel'
 import { useServerStore } from '@/stores/server-store'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { DisconnectedRouterPlaceholder } from '@/components/disconnected-router-placeholder'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+import { computeTrafficRate } from '@/lib/traffic-rate'
 import { Lock, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-
-type ActiveUser = {
-  user?: string
-  name?: string
-  address?: string
-  macAddress?: string
-  uptime?: string
-}
+import { useAuthStore } from '@/stores/auth-store'
+import { useMonitoringSocket } from '@/hooks/use-monitoring-socket'
 
 type DashboardMetrics = {
   activeUsers: number
   activeUsersList: ActiveUser[]
-  vouchers: number
   resources: RouterResources | null
   traffic: TrafficInterface[]
   trafficRate: { rx: number; tx: number } | null
@@ -58,7 +54,6 @@ type DashboardMetrics = {
 const EMPTY_METRICS: DashboardMetrics = {
   activeUsers: 0,
   activeUsersList: [],
-  vouchers: 0,
   resources: null,
   traffic: [],
   trafficRate: null,
@@ -67,73 +62,39 @@ const EMPTY_METRICS: DashboardMetrics = {
   isNotFound: false,
 }
 
-// Counter kumulatif tick sebelumnya per router — untuk menghitung rate trafik
-// (bit/detik) dari delta antar poll. Module-level agar bertahan antar render.
-const prevTrafficCounters = new Map<string, { ts: number; rx: number; tx: number }>()
-
-function computeTrafficRate(
-  serverId: string,
-  traffic: TrafficInterface[]
-): { rx: number; tx: number } | null {
-  if (!traffic.length) {
-    prevTrafficCounters.delete(serverId)
-    return null
-  }
-  const rx = traffic.reduce((s, t) => s + (t.rxByte || 0), 0)
-  const tx = traffic.reduce((s, t) => s + (t.txByte || 0), 0)
-  const now = Date.now()
-  const prev = prevTrafficCounters.get(serverId)
-  prevTrafficCounters.set(serverId, { ts: now, rx, tx })
-  if (!prev || now <= prev.ts) return null // tick pertama: belum ada delta
-  const dt = (now - prev.ts) / 1000
-  // Counter reset (router reboot) → delta negatif → anggap 0.
-  return {
-    rx: (Math.max(0, rx - prev.rx) * 8) / dt,
-    tx: (Math.max(0, tx - prev.tx) * 8) / dt,
-  }
-}
-
 const is403 = (e: unknown) => e instanceof AxiosError && e.response?.status === 403
 const is404 = (e: unknown) => e instanceof AxiosError && e.response?.status === 404
 
-// Field snapshot activeUsers (mapper backend) → bentuk yang dipakai RecentSales.
-type SnapshotActiveUser = {
-  username?: string
-  ipAddress?: string
-  macAddress?: string
-  uptime?: string
+// Snapshot activeUsers (mapper backend) → bentuk yang dipakai RecentSales.
+// Dipakai baik dari REST fetchDashboardMetrics maupun dari event WS 'snapshot'
+// (lihat useMonitoringSocket), shape-nya identik di kedua sumber.
+function mapSnapshotActiveUsers(list: SnapshotActiveUser[]): ActiveUser[] {
+  return list.map((u) => ({
+    user: u.username,
+    address: u.ipAddress,
+    macAddress: u.macAddress,
+    uptime: u.uptime,
+  }))
 }
 
-// Aggregates every dashboard metric in one pass. Never throws: a connection
-// failure surfaces as `isDisconnected`, an OWNER-restricted panel as
-// `isForbidden` — so the query always resolves with a metrics snapshot.
-// Data monitoring diambil via GET /monitoring/snapshot (1 request = 1 login
-// router untuk active+resources+traffic) — lihat desain/dashboard-ia-plan.md §7 D1.
+// Aggregates dashboard metrics (monitoring snapshot only — jumlah voucher
+// dipisah ke query sendiri, lihat useQuery(['dashboard-vouchers-count',…])).
+// Never throws: a connection failure surfaces as `isDisconnected`, an
+// OWNER-restricted panel as `isForbidden` — so the query always resolves
+// with a metrics snapshot. REST fallback-only kalau WS 'live' (lihat B7:
+// docs/superpowers/specs/2026-07-12-websocket-monitoring-design.md).
 async function fetchDashboardMetrics(
   serverId: string,
   signal: AbortSignal
 ): Promise<DashboardMetrics> {
   const metrics: DashboardMetrics = { ...EMPTY_METRICS }
 
-  // Vouchers (allowed for all roles)
-  try {
-    const vRes = await api.get('/vouchers', { params: { serverId, take: 1 }, signal })
-    metrics.vouchers = vRes.data?.meta?.total || 0
-  } catch (e) {
-    if (!is403(e)) metrics.isDisconnected = true
-  }
-
   // Snapshot: active users + resources + traffic (TEKNISI/SUPER_ADMIN)
   try {
     const sRes = await api.get(`/monitoring/snapshot/${serverId}`, { signal })
     const snap = sRes.data ?? {}
-    metrics.activeUsersList = ((snap.activeUsers ?? []) as SnapshotActiveUser[]).map(
-      (u) => ({
-        user: u.username,
-        address: u.ipAddress,
-        macAddress: u.macAddress,
-        uptime: u.uptime,
-      })
+    metrics.activeUsersList = mapSnapshotActiveUsers(
+      (snap.activeUsers ?? []) as SnapshotActiveUser[]
     )
     metrics.activeUsers = metrics.activeUsersList.length
     metrics.resources = snap.resources ?? null
@@ -167,16 +128,67 @@ export function Dashboard() {
   const queryClient = useQueryClient()
   const [isRetrying, setIsRetrying] = useState(false)
 
-  // One aggregated query, polled every 3s (against the backend, not the
-  // router directly). queryFn never throws, so failures show as isDisconnected.
-  const { data: metrics = EMPTY_METRICS, isPending, refetch } = useQuery({
-    queryKey: ['dashboard-metrics', activeServerId ?? 'none'],
-    queryFn: ({ signal }) => fetchDashboardMetrics(activeServerId as string, signal),
+  const role = useAuthStore((s) => s.auth.user?.role)
+  const isOwner = role === 'OWNER'
+
+  // WS primer untuk resources/active users/traffic — OWNER tetap 100% di
+  // jalur REST lama (kontrak WS+RBAC belum terkonfirmasi backend), lihat B7.
+  const wsResult = useMonitoringSocket(activeServerId, !isOwner)
+  const useWsData = !isOwner && wsResult.wsStatus === 'live'
+
+  // Jumlah voucher: dipisah dari fetchDashboardMetrics, selalu aktif tak
+  // terikat status WS.
+  const { data: vouchers = 0 } = useQuery({
+    queryKey: ['dashboard-vouchers-count', activeServerId ?? 'none'],
+    queryFn: ({ signal }) =>
+      api
+        .get('/vouchers', { params: { serverId: activeServerId, take: 1 }, signal })
+        .then((r) => r.data?.meta?.total || 0),
     enabled: !!activeServerId,
     refetchInterval: 3000,
   })
 
-  const isDisconnected = !isPending && metrics.isDisconnected
+  const { data: usedVouchers = 0 } = useQuery({
+    queryKey: ['dashboard-used-vouchers-count', activeServerId ?? 'none'],
+    queryFn: ({ signal }) =>
+      api
+        .get('/vouchers', { params: { serverId: activeServerId, status: 'USED', take: 1 }, signal })
+        .then((r) => r.data?.meta?.total || 0),
+    enabled: !!activeServerId,
+    refetchInterval: 3000,
+  })
+
+  // REST fallback (dan jalur OWNER) — polled every 3s (against the backend,
+  // not the router directly). queryFn never throws, so failures show as
+  // isDisconnected. No-op kalau WS sedang 'live'.
+  const { data: metrics = EMPTY_METRICS, isPending, refetch } = useQuery({
+    queryKey: ['dashboard-metrics', activeServerId ?? 'none'],
+    queryFn: ({ signal }) => fetchDashboardMetrics(activeServerId as string, signal),
+    enabled: !!activeServerId && (isOwner || wsResult.wsStatus === 'unavailable'),
+    refetchInterval: 3000,
+  })
+
+  const isForbidden = useWsData ? false : metrics.isForbidden
+  const resources = useWsData ? wsResult.resources : metrics.resources
+  const activeUsersList = useWsData
+    ? mapSnapshotActiveUsers(wsResult.activeUsers)
+    : metrics.activeUsersList
+  const traffic = useWsData ? wsResult.traffic : metrics.traffic
+  const wsTrafficRate = useMemo(
+    () => (activeServerId ? computeTrafficRate(activeServerId, wsResult.traffic) : null),
+    [activeServerId, wsResult.traffic]
+  )
+  const trafficRate = useWsData ? wsTrafficRate : metrics.trafficRate
+  const isDisconnected = useWsData
+    ? wsResult.routerConnected === false
+    : !isPending && metrics.isDisconnected
+  const liveMode: 'live' | 'polling' | 'connecting' = isOwner
+    ? 'polling'
+    : wsResult.wsStatus === 'live'
+      ? 'live'
+      : wsResult.wsStatus === 'connecting'
+        ? 'connecting'
+        : 'polling'
 
   const handleRetry = async () => {
     setIsRetrying(true)
@@ -195,6 +207,7 @@ export function Dashboard() {
     onSuccess: () => {
       toast.success('Berhasil menarik data profil dan voucher terbaru dari router!')
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', activeServerId ?? 'none'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-vouchers-count', activeServerId ?? 'none'] })
       if (activeServerId) {
         queryClient.invalidateQueries({ queryKey: qk.vouchers(activeServerId) })
       }
@@ -262,7 +275,7 @@ export function Dashboard() {
             </TabsList>
           </div>
           <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2'>
+            <div className='grid gap-4 sm:grid-cols-3'>
               <Card className={nestedCardClass}>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
@@ -282,13 +295,13 @@ export function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  {metrics.isForbidden ? (
+                  {isForbidden ? (
                     <div className='flex items-center gap-2 text-sm text-muted-foreground font-medium'>
                       <Lock className='h-4 w-4' /> Akses Khusus Teknisi
                     </div>
                   ) : (
                     <>
-                      <div className='text-2xl font-semibold tracking-tight tabular-nums'>{metrics.activeUsers}</div>
+                      <div className='text-2xl font-semibold tracking-tight tabular-nums'>{activeUsersList.length}</div>
                       <p className='text-xs text-muted-foreground'>
                         pelanggan terhubung saat ini
                       </p>
@@ -317,9 +330,36 @@ export function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-semibold tracking-tight tabular-nums'>{metrics.vouchers}</div>
+                  <div className='text-2xl font-semibold tracking-tight tabular-nums'>{vouchers}</div>
                   <p className='text-xs text-muted-foreground'>
                     total voucher dalam sistem
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className={nestedCardClass}>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Voucher Terpakai
+                  </CardTitle>
+                  <svg
+                    xmlns='http://www.w3.org/2000/svg'
+                    viewBox='0 0 24 24'
+                    fill='none'
+                    stroke='currentColor'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    className='h-4 w-4 text-muted-foreground'
+                  >
+                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
+                    <circle cx='9' cy='7' r='4' />
+                    <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
+                  </svg>
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-semibold tracking-tight tabular-nums'>{usedVouchers}</div>
+                  <p className='text-xs text-muted-foreground'>
+                    voucher yang sudah digunakan
                   </p>
                 </CardContent>
               </Card>
@@ -327,11 +367,12 @@ export function Dashboard() {
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
               <RouterHealthPanel
                 className={`col-span-1 lg:col-span-3 ${nestedCardClass}`}
-                resources={metrics.resources}
-                hasTraffic={metrics.traffic.length > 0}
-                trafficRate={metrics.trafficRate}
-                isForbidden={metrics.isForbidden}
-                isLive={!!metrics.resources}
+                resources={resources}
+                hasTraffic={traffic.length > 0}
+                trafficRate={trafficRate}
+                isForbidden={isForbidden}
+                isLive={!!resources}
+                liveMode={liveMode}
                 host={activeServer?.host}
                 port={activeServer?.port}
                 lastStatus={activeServer?.lastStatus}
@@ -345,7 +386,7 @@ export function Dashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RecentSales data={metrics.activeUsersList} isForbidden={metrics.isForbidden} />
+                  <RecentSales data={activeUsersList} isForbidden={isForbidden} />
                 </CardContent>
               </Card>
             </div>

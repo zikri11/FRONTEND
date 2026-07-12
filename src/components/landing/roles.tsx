@@ -1,7 +1,6 @@
 
 const WorflowImg01 = "/images/workflow-01.png";
 const WorflowImg02 = "/images/workflow-02.png";
-const WorflowImg03 = "/images/workflow-03.png";
 import Spotlight from "@/components/landing/spotlight";
 
 export default function Roles() {

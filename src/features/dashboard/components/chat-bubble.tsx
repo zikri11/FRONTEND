@@ -63,11 +63,6 @@ type Message = {
   content: string
 }
 
-type Thread = {
-  id: string
-  title: string
-  messages: Message[]
-}
 
 export function ChatBubble() {
   const { activeServerId, servers, fetchServers } = useServerStore()

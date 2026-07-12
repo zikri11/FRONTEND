@@ -27,13 +27,11 @@ import {
   FieldError,
 } from '@/components/ui/field'
 import { api } from '@/lib/axios'
-import { useServerStore } from '@/stores/server-store'
 
 export function EditRouter() {
   const router = useRouter()
   // @ts-ignore - Route generic typing will handle this in actual implementation
   const { id } = useParams({ strict: false })
-  const { servers } = useServerStore()
   
   const [formData, setFormData] = useState({
     routerName: '',

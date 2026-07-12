@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { useServerStore } from '@/stores/server-store'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import {
   Field,
   FieldLabel,
@@ -177,18 +178,19 @@ export function AddBulkVoucher() {
       </Header>
 
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-start justify-between gap-2'>
-          <div>
-            <h2 className='text-2xl font-semibold tracking-tight'>Buat Voucher Massal</h2>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Generate ratusan kode voucher secara instan dalam satu langkah.
-            </p>
+        <div className={outerBoxClass}>
+          <div className='flex flex-wrap items-start justify-between gap-2'>
+            <div>
+              <h2 className='text-2xl font-semibold tracking-tight'>Buat Voucher Massal</h2>
+              <p className='text-sm text-muted-foreground mt-1'>
+                Generate ratusan kode voucher secara instan dalam satu langkah.
+              </p>
+            </div>
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className='mt-2 space-y-6'>
-          {/* Pengaturan Utama */}
-          <Card className='shadow-md border bg-card/40 backdrop-blur-xs'>
+          <form onSubmit={handleSubmit} className='space-y-4'>
+            {/* Pengaturan Utama */}
+            <Card className={`${nestedCardClass} shadow-md border`}>
             <CardHeader className='border-b bg-muted/20 px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center gap-2'>
                 <Zap className='h-5 w-5 text-primary' />
@@ -253,7 +255,7 @@ export function AddBulkVoucher() {
           </Card>
 
           {/* Format Kode */}
-          <Card className='shadow-md border bg-card/40 backdrop-blur-xs'>
+            <Card className={`${nestedCardClass} shadow-md border`}>
             <CardHeader className='border-b bg-muted/20 px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center gap-2'>
                 <KeyRound className='h-5 w-5 text-primary' />
@@ -342,7 +344,7 @@ export function AddBulkVoucher() {
           </Card>
 
           {/* Konfigurasi Tambahan */}
-          <Card className='shadow-md border bg-card/40 backdrop-blur-xs'>
+            <Card className={`${nestedCardClass} shadow-md border`}>
             <CardHeader className='border-b bg-muted/20 px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center gap-2'>
                 <Store className='h-5 w-5 text-primary' />
@@ -388,7 +390,8 @@ export function AddBulkVoucher() {
               </div>
             </CardFooter>
           </Card>
-        </form>
+          </form>
+        </div>
       </Main>
     </>
   )

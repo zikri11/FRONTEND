@@ -27,6 +27,7 @@ import {
   FieldError,
 } from '@/components/ui/field'
 import { api } from '@/lib/axios'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 
 export function RegisterRouter() {
   const router = useRouter()
@@ -150,17 +151,18 @@ export function RegisterRouter() {
       </Header>
 
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <div className='flex flex-wrap items-start justify-between gap-2'>
-          <div>
-            <h2 className='text-2xl font-semibold tracking-tight'>Daftarkan Router</h2>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Masukkan konfigurasi API port dan kredensial untuk mendaftarkan router MikroTik baru.
-            </p>
+        <div className={outerBoxClass}>
+          <div className='flex flex-wrap items-start justify-between gap-2'>
+            <div>
+              <h2 className='text-2xl font-semibold tracking-tight'>Daftarkan Router</h2>
+              <p className='text-sm text-muted-foreground mt-1'>
+                Masukkan konfigurasi API port dan kredensial untuk mendaftarkan router MikroTik baru.
+              </p>
+            </div>
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className='mt-2 space-y-6'>
-          <Card className='shadow-md border bg-card/40 backdrop-blur-xs'>
+          <form onSubmit={handleSubmit} className='space-y-4'>
+            <Card className={`${nestedCardClass} shadow-md border`}>
             <CardHeader className='border-b bg-muted/20 px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center gap-2'>
                 <Server className='h-5 w-5 text-primary' />
@@ -237,7 +239,7 @@ export function RegisterRouter() {
           </Card>
 
           {/* Kredensial Admin Card */}
-          <Card className='shadow-md border bg-card/40 backdrop-blur-xs'>
+            <Card className={`${nestedCardClass} shadow-md border`}>
             <CardHeader className='border-b bg-muted/20 px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center gap-2'>
                 <Key className='h-5 w-5 text-primary' />
@@ -278,7 +280,7 @@ export function RegisterRouter() {
           </Card>
 
           {/* Data Hotspot (Optional) Card */}
-          <Card className='shadow-md border bg-card/40 backdrop-blur-xs'>
+            <Card className={`${nestedCardClass} shadow-md border`}>
             <CardHeader className='border-b bg-muted/20 px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center gap-2'>
                 <Wifi className='h-5 w-5 text-primary' />
@@ -350,7 +352,8 @@ export function RegisterRouter() {
               </div>
             </CardFooter>
           </Card>
-        </form>
+          </form>
+        </div>
       </Main>
     </>
   )

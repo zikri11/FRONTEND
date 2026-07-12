@@ -39,6 +39,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { useServerStore } from '@/stores/server-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { api } from '@/lib/axios'
 import { qk } from '@/lib/query-keys'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
@@ -56,6 +57,8 @@ type HotspotProfile = {
 
 export function Profiles() {
   const { activeServerId, isLoading } = useServerStore()
+  const role = useAuthStore((s) => s.auth.user?.role)
+  const isOwner = role === 'OWNER'
   const queryClient = useQueryClient()
   const [profileToDelete, setProfileToDelete] = useState<string | null>(null)
 
@@ -137,15 +140,17 @@ export function Profiles() {
                   Kelola paket bandwidth & masa aktif router Anda.
                 </p>
               </div>
-              <div className='flex gap-2'>
-                <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
-                </Button>
-                <Button asChild>
-                  <Link to='/profiles/add'>Buat Profil</Link>
-                </Button>
-              </div>
+              {!isOwner && (
+                <div className='flex gap-2'>
+                  <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
+                  </Button>
+                  <Button asChild>
+                    <Link to='/profiles/add'>Buat Profil</Link>
+                  </Button>
+                </div>
+              )}
             </div>
 
         <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
@@ -229,22 +234,24 @@ export function Profiles() {
                         </div>
                       </TableCell>
                       <TableCell className='text-right'>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant='ghost' size='icon' className='size-8'>
-                              <MoreHorizontalIcon />
-                              <span className='sr-only'>Buka menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align='end'>
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                            <DropdownMenuItem>Duplikat</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem variant='destructive' onClick={() => setProfileToDelete(profile.id)}>
-                              Hapus
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {!isOwner && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant='ghost' size='icon' className='size-8'>
+                                <MoreHorizontalIcon />
+                                <span className='sr-only'>Buka menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align='end'>
+                              <DropdownMenuItem>Edit</DropdownMenuItem>
+                              <DropdownMenuItem>Duplikat</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant='destructive' onClick={() => setProfileToDelete(profile.id)}>
+                                Hapus
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   )

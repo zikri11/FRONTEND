@@ -43,6 +43,7 @@ import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
 import { useServerStore } from '@/stores/server-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 
 function StatusBadge({ status }: { status: string }) {
@@ -72,6 +73,8 @@ function StatusBadge({ status }: { status: string }) {
 
 export function Servers() {
   const { servers, isLoading, fetchServers } = useServerStore()
+  const role = useAuthStore((s) => s.auth.user?.role)
+  const isOwner = role === 'OWNER'
   const [testingId, setTestingId] = useState<string | null>(null)
   const [serverToDelete, setServerToDelete] = useState<string | null>(null)
 
@@ -126,9 +129,11 @@ export function Servers() {
               Kelola koneksi multi-server MikroTik, uji latensi API, & atur kredensial.
             </p>
           </div>
-          <Button asChild>
-            <Link to='/servers/add'>Daftarkan Router</Link>
-          </Button>
+          {!isOwner && (
+            <Button asChild>
+              <Link to='/servers/add'>Daftarkan Router</Link>
+            </Button>
+          )}
         </div>
 
         <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
@@ -195,19 +200,25 @@ export function Servers() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
-                          <DropdownMenuItem asChild>
-                            <Link to='/servers/edit/$id' params={{ id: server.id }}>Edit</Link>
-                          </DropdownMenuItem>
+                          {!isOwner && (
+                            <DropdownMenuItem asChild>
+                              <Link to='/servers/edit/$id' params={{ id: server.id }}>Edit</Link>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleTestConnection(server.id)}
                             disabled={testingId === server.id}
                           >
                             {testingId === server.id ? 'Menguji...' : 'Test Koneksi'}
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem variant='destructive' onClick={() => setServerToDelete(server.id)}>
-                            Hapus
-                          </DropdownMenuItem>
+                          {!isOwner && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant='destructive' onClick={() => setServerToDelete(server.id)}>
+                                Hapus
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

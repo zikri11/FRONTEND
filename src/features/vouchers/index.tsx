@@ -54,6 +54,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { useServerStore } from '@/stores/server-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
@@ -77,58 +78,92 @@ type Voucher = {
 export function Vouchers() {
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
   const { servers, activeServerId, isLoading } = useServerStore()
+  const role = useAuthStore((s) => s.auth.user?.role)
+  const isOwner = role === 'OWNER'
   const queryClient = useQueryClient()
   const activeServer = servers.find((s) => s.id === activeServerId)
   const [search, setSearch] = React.useState('')
+  const [debouncedSearch, setDebouncedSearch] = React.useState('')
   const [profileFilter, setProfileFilter] = React.useState('all')
-
-  const {
-    data: vouchers = [],
-    isPending,
-    isError,
-    refetch,
-  } = useQuery<Voucher[]>({
-    queryKey: qk.vouchers(activeServerId ?? 'none'),
-    queryFn: ({ signal }) =>
-      api.get('/vouchers', { params: { serverId: activeServerId }, signal }).then((res) => res.data),
-    enabled: !!activeServerId,
-  })
+  const [statusFilter, setStatusFilter] = React.useState('all')
 
   // Pagination & Action States
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+      setCurrentPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const {
+    data: vouchersResponse = { data: [], meta: { total: 0, skip: 0, take: 10 } },
+    isPending,
+    isError,
+    refetch,
+  } = useQuery<{ data: Voucher[], meta: { total: number, skip: number, take: number } }>({
+    queryKey: qk.vouchers(activeServerId ?? 'none', {
+      search: debouncedSearch || undefined,
+      profileId: profileFilter === 'all' ? undefined : profileFilter,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize
+    }),
+    queryFn: ({ signal }) =>
+      api.get('/vouchers', {
+        params: {
+          serverId: activeServerId,
+          search: debouncedSearch || undefined,
+          profileId: profileFilter === 'all' ? undefined : profileFilter,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          skip: (currentPage - 1) * pageSize,
+          take: pageSize
+        },
+        signal
+      }).then((res) => res.data),
+    enabled: !!activeServerId,
+  })
+
+  const { data: profiles = [] } = useQuery<{ id: string, name: string }[]>({
+    queryKey: qk.profiles(activeServerId ?? 'none'),
+    queryFn: ({ signal }) =>
+      api.get('/profiles', { params: { serverId: activeServerId }, signal }).then((res) => res.data),
+    enabled: !!activeServerId,
+  })
+
+  // Total per-status (scoped ke seluruh router, independen dari pagination/filter halaman aktif)
+  const { data: unusedVouchers = 0 } = useQuery({
+    queryKey: qk.vouchers(activeServerId ?? 'none', { status: 'UNUSED', take: 1 }),
+    queryFn: ({ signal }) =>
+      api.get('/vouchers', { params: { serverId: activeServerId, status: 'UNUSED', take: 1 }, signal })
+        .then((res) => res.data.meta.total as number),
+    enabled: !!activeServerId,
+  })
+  const { data: usedVouchers = 0 } = useQuery({
+    queryKey: qk.vouchers(activeServerId ?? 'none', { status: 'USED', take: 1 }),
+    queryFn: ({ signal }) =>
+      api.get('/vouchers', { params: { serverId: activeServerId, status: 'USED', take: 1 }, signal })
+        .then((res) => res.data.meta.total as number),
+    enabled: !!activeServerId,
+  })
+
+  // Action States
   const [voucherToDelete, setVoucherToDelete] = React.useState<string | null>(null)
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false)
 
-  // Dynamic calculations (stats over ALL vouchers on this router)
-  const totalVouchers = vouchers.length
-  const usedVouchers = vouchers.filter(v => v.status === 'USED' || v.status === 'Terpakai').length
-  const unusedVouchers = totalVouchers - usedVouchers
+  const vouchers = vouchersResponse.data
+  const totalVouchers = vouchersResponse.meta.total
 
   const dynamicPieData = [
     { name: "Belum Dipakai", value: unusedVouchers, fill: "hsl(var(--primary))" },
     { name: "Terpakai", value: usedVouchers, fill: "hsl(var(--muted-foreground))" },
   ]
 
-  // Distinct profile names present, for the filter dropdown
-  const profileNames = Array.from(
-    new Set(vouchers.map((v) => v.profile?.name).filter((n): n is string => !!n))
-  )
-
-  // Search + profile filter, then client-side pagination over the result
-  const filteredVouchers = vouchers.filter((v) => {
-    const q = search.trim().toLowerCase()
-    const matchesSearch =
-      !q ||
-      (v.username || v.kode || '').toLowerCase().includes(q) ||
-      (v.password || '').toLowerCase().includes(q)
-    const matchesProfile = profileFilter === 'all' || v.profile?.name === profileFilter
-    return matchesSearch && matchesProfile
-  })
-
-  const totalPages = Math.ceil(filteredVouchers.length / pageSize)
-  const safePage = Math.min(currentPage, totalPages) || 1
-  const paginatedVouchers = filteredVouchers.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const totalPages = Math.ceil(totalVouchers / pageSize)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
 
   const invalidateVouchers = () => {
     if (activeServerId) {
@@ -214,45 +249,47 @@ export function Vouchers() {
                   Buat voucher instan & massal di {activeServer?.name || activeServer?.host || 'router ini'}.
                 </p>
               </div>
-              <div className='flex gap-2 items-center'>
-                <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
-                </Button>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button>Buat Voucher</Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-64 p-2">
-                    <div className="grid gap-1">
-                      <Button
-                        variant="ghost"
-                        className="h-auto w-full justify-start flex-col items-start gap-1.5 p-2.5 font-normal"
-                        asChild
-                      >
-                        <Link to="/vouchers/add-single">
-                          <span className="text-sm font-medium leading-none">Tunggal</span>
-                          <span className="text-xs text-muted-foreground text-left whitespace-normal">
-                            Buat voucher satuan secara manual.
-                          </span>
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="h-auto w-full justify-start flex-col items-start gap-1.5 p-2.5 font-normal"
-                        asChild
-                      >
-                        <Link to="/vouchers/add-bulk">
-                          <span className="text-sm font-medium leading-none">Masal</span>
-                          <span className="text-xs text-muted-foreground text-left whitespace-normal">
-                            Generate banyak voucher otomatis.
-                          </span>
-                        </Link>
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {!isOwner && (
+                <div className='flex gap-2 items-center'>
+                  <Button variant='outline' onClick={() => syncMutation.mutate()} disabled={isSyncing}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
+                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button>Buat Voucher</Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-64 p-2">
+                      <div className="grid gap-1">
+                        <Button
+                          variant="ghost"
+                          className="h-auto w-full justify-start flex-col items-start gap-1.5 p-2.5 font-normal"
+                          asChild
+                        >
+                          <Link to="/vouchers/add-single">
+                            <span className="text-sm font-medium leading-none">Tunggal</span>
+                            <span className="text-xs text-muted-foreground text-left whitespace-normal">
+                              Buat voucher satuan secara manual.
+                            </span>
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="h-auto w-full justify-start flex-col items-start gap-1.5 p-2.5 font-normal"
+                          asChild
+                        >
+                          <Link to="/vouchers/add-bulk">
+                            <span className="text-sm font-medium leading-none">Masal</span>
+                            <span className="text-xs text-muted-foreground text-left whitespace-normal">
+                              Generate banyak voucher otomatis.
+                            </span>
+                          </Link>
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
             </div>
 
         <Tabs defaultValue="list" className="w-full">
@@ -317,25 +354,41 @@ export function Vouchers() {
               placeholder="Cari kode atau username..."
               className="pl-8 w-full"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="w-full sm:w-[200px]">
-            <Select value={profileFilter} onValueChange={(v) => { setProfileFilter(v); setCurrentPage(1) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter Profil" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Profil</SelectItem>
-                {profileNames.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="w-full sm:w-[180px]">
+              <Select value={profileFilter} onValueChange={(v) => { setProfileFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter Profil" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Profil</SelectItem>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:w-[160px]">
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="UNUSED">Belum Dipakai</SelectItem>
+                  <SelectItem value="USED">Terpakai</SelectItem>
+                  <SelectItem value="REVOKED">Dicabut</SelectItem>
+                  <SelectItem value="EXPIRED">Kedaluwarsa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        {selectedRows.size > 0 && (
+        {!isOwner && selectedRows.size > 0 && (
           <div className="flex items-center gap-4 p-2 bg-destructive/10 text-destructive rounded-md border border-destructive/20 mb-2">
             <span className="text-sm font-medium px-2">{selectedRows.size} voucher dipilih</span>
             <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteAlertOpen(true)}>
@@ -380,14 +433,14 @@ export function Vouchers() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ) : paginatedVouchers.length === 0 ? (
+              ) : vouchers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                    {search || profileFilter !== 'all' ? 'Tidak ada voucher yang cocok.' : 'Belum ada voucher.'}
+                    {debouncedSearch || profileFilter !== 'all' || statusFilter !== 'all' ? 'Tidak ada voucher yang cocok.' : 'Belum ada voucher.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedVouchers.map((row) => (
+                vouchers.map((row) => (
                   <TableRow 
                     key={row.id}
                     data-state={selectedRows.has(row.id) ? "selected" : undefined}
@@ -444,10 +497,14 @@ export function Vouchers() {
                           <DropdownMenuItem onClick={() => handlePrintSingle(row.id)}>
                             <PrinterIcon className="mr-2 h-4 w-4" /> Cetak PDF
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem variant='destructive' onClick={() => setVoucherToDelete(row.id)}>
-                            <Trash2Icon className="mr-2 h-4 w-4" /> Hapus
-                          </DropdownMenuItem>
+                          {!isOwner && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant='destructive' onClick={() => setVoucherToDelete(row.id)}>
+                                <Trash2Icon className="mr-2 h-4 w-4" /> Hapus
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

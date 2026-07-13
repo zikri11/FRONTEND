@@ -2,15 +2,7 @@ import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import {
-  Upload,
-  Download,
-  Users,
-  Tag,
-  MoreHorizontalIcon,
-  RefreshCw,
-  Gauge,
-} from 'lucide-react'
+import { MoreHorizontalIcon, RefreshCw, Gauge } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { useServerStore } from '@/stores/server-store'
@@ -252,32 +244,10 @@ export function Profiles() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className='flex items-center gap-2 text-sm font-semibold'>
-                                <span className='flex items-center'>
-                                  <Upload className='mr-1 h-3.5 w-3.5 text-muted-foreground' />{' '}
-                                  {up || '-'}
-                                </span>
-                                <span className='font-normal text-muted-foreground'>
-                                  /
-                                </span>
-                                <span className='flex items-center'>
-                                  <Download className='mr-1 h-3.5 w-3.5 text-muted-foreground' />{' '}
-                                  {down || '-'}
-                                </span>
-                              </div>
+                              {up || '-'} / {down || '-'}
                             </TableCell>
-                            <TableCell>
-                              <div className='flex items-center text-sm font-semibold'>
-                                <Users className='mr-1.5 h-3.5 w-3.5 text-muted-foreground' />{' '}
-                                {profile.sharedUsers || 1}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className='flex items-center text-sm font-semibold'>
-                                <Tag className='mr-1.5 h-3.5 w-3.5 text-muted-foreground' />{' '}
-                                {profile.validity || '-'}
-                              </div>
-                            </TableCell>
+                            <TableCell>{profile.sharedUsers || 1}</TableCell>
+                            <TableCell>{profile.validity || '-'}</TableCell>
                             <TableCell className='text-right'>
                               {!isOwner && (
                                 <DropdownMenu>

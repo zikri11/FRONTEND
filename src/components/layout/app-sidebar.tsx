@@ -38,6 +38,12 @@ export function AppSidebar() {
             if (user?.role === 'TEKNISI' && item.title === 'Kelola Teknisi') {
               return false
             }
+            if (
+              user?.role === 'OWNER' &&
+              (item.title === 'Server' || item.title === 'Developer')
+            ) {
+              return false
+            }
             return true
           })
 

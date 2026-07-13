@@ -124,13 +124,23 @@ export function EditRouter() {
           password: formData.password,
           useSSL: formData.useSsl,
         })
-        toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
-        setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
+        if (response.data?.success) {
+          toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
+          setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
+        } else {
+          toast.error(response.data?.error || 'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.')
+          setTestResult({ status: 'error', message: 'Koneksi Gagal' })
+        }
       } else {
         toast.info('Tes koneksi menggunakan password tersimpan. Jika Anda merubah IP/Username, silakan simpan dulu.')
         const response = await api.post(`/servers/${id}/test-connection`)
-        toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
-        setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
+        if (response.data?.success) {
+          toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
+          setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
+        } else {
+          toast.error(response.data?.error || 'Gagal terhubung ke router. Periksa konfigurasi.')
+          setTestResult({ status: 'error', message: 'Koneksi Gagal' })
+        }
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.')

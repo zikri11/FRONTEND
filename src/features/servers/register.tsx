@@ -93,8 +93,14 @@ export function RegisterRouter() {
         password: formData.password,
         useSSL: formData.useSsl,
       })
-      toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
-      setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
+      
+      if (response.data?.success) {
+        toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
+        setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
+      } else {
+        toast.error(response.data?.error || 'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.')
+        setTestResult({ status: 'error', message: 'Koneksi Gagal' })
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.')
       setTestResult({ status: 'error', message: 'Koneksi Gagal' })

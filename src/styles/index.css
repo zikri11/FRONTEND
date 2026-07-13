@@ -182,9 +182,6 @@
   --warning-foreground: #ffffff;
   --invert: var(--color-zinc-900);
   --invert-foreground: var(--color-zinc-50);
-  --success: var(--color-emerald-500);
-  --info: var(--color-violet-500);
-  --warning: var(--color-yellow-500);
 }
 
 .dark {
@@ -195,9 +192,6 @@
   --warning-foreground: #171717;
   --invert: var(--color-zinc-700);
   --invert-foreground: var(--color-zinc-50);
-  --success: var(--color-emerald-500);
-  --info: var(--color-violet-500);
-  --warning: var(--color-yellow-500);
 }
 
 @theme inline {

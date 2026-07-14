@@ -32,6 +32,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
 import { ChatBubble } from './components/chat-bubble'
 import { RecentSales } from './components/recent-sales'
+import { RecentPosTransactions } from './components/recent-pos-transactions'
 import {
   RouterHealthPanel,
   type ActiveUser,
@@ -431,16 +432,24 @@ export function Dashboard() {
                       className={`col-span-1 lg:col-span-4 ${nestedCardClass}`}
                     >
                       <CardHeader>
-                        <CardTitle>Pengguna Aktif</CardTitle>
+                        <CardTitle>
+                          {isOwner ? 'Transaksi POS Terbaru' : 'Pengguna Aktif'}
+                        </CardTitle>
                         <CardDescription>
-                          Pelanggan terhubung saat ini
+                          {isOwner
+                            ? 'Riwayat transaksi terbaru dari sistem POS'
+                            : 'Pelanggan terhubung saat ini'}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <RecentSales
-                          data={activeUsersList}
-                          isForbidden={isForbidden}
-                        />
+                        {isOwner ? (
+                          <RecentPosTransactions />
+                        ) : (
+                          <RecentSales
+                            data={activeUsersList}
+                            isForbidden={isForbidden}
+                          />
+                        )}
                       </CardContent>
                     </Card>
                   </div>

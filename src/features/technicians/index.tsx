@@ -4,6 +4,8 @@ import { Header } from '@/components/layout/header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { Card } from '@/components/ui/card'
+import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import {
   Table,
   TableBody,
@@ -127,7 +129,7 @@ export function Technicians() {
         </div>
       </Header>
 
-      <div className='p-6'>
+      <div className={outerBoxClass}>
         <div className='mb-6 flex items-center justify-between'>
           <div>
             <h1 className='text-2xl font-semibold tracking-tight'>Kelola Teknisi</h1>
@@ -146,62 +148,72 @@ export function Technicians() {
           </div>
         </div>
 
-        <div className='rounded-md border bg-card'>
+        <Card className={`${nestedCardClass} shadow-md border`}>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tanggal Dibuat</TableHead>
-                <TableHead>Aksi</TableHead>
+              <TableRow className='hover:bg-transparent'>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Nama
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Email
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Status
+                </TableHead>
+                <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                  Tanggal Dibuat
+                </TableHead>
+                <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                  Aksi
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
+                <TableRow className='hover:bg-transparent'>
                   <TableCell colSpan={5} className='h-24 text-center'>
                     <Loader2 className='mx-auto h-6 w-6 animate-spin text-primary' />
                   </TableCell>
                 </TableRow>
               ) : error ? (
-                <TableRow>
-                  <TableCell colSpan={5} className='h-24 text-center text-destructive'>
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={5} className='h-24 text-center text-sm text-destructive'>
                     {error}
                   </TableCell>
                 </TableRow>
               ) : technicians.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className='h-24 text-center text-muted-foreground'>
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={5} className='h-24 text-center text-sm text-muted-foreground'>
                     Belum ada data teknisi.
                   </TableCell>
                 </TableRow>
               ) : (
                 technicians.map((tech) => (
                   <TableRow key={tech.id}>
-                    <TableCell className='font-medium'>{tech.name}</TableCell>
-                    <TableCell>{tech.email}</TableCell>
+                    <TableCell className='text-sm text-foreground'>{tech.name}</TableCell>
+                    <TableCell className='text-sm text-muted-foreground'>{tech.email}</TableCell>
                     <TableCell>
                       {tech.isActive ? (
-                        <Badge variant="secondary" className="bg-success/10 text-success hover:bg-success/20 border-success/20">
+                        <Badge size="sm" className="border-success/20 bg-success/10 text-success">
                           <BadgeCheck className="w-3.5 h-3.5 mr-1" data-icon="inline-start" />
                           Aktif
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-slate-500/10 text-slate-500 hover:bg-slate-500/20 border-slate-500/20">
+                        <Badge size="sm" variant="secondary" className="text-muted-foreground">
                           <XCircle className="w-3.5 h-3.5 mr-1" data-icon="inline-start" />
                           Nonaktif
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                       {new Date(tech.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'
                       })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='text-right'>
                       <Button variant='ghost' size='sm' onClick={() => handleEditClick(tech)}>Edit</Button>
                       <Button variant='ghost' size='sm' className='text-destructive' onClick={() => handleDeleteClick(tech)}>Hapus</Button>
                     </TableCell>
@@ -210,7 +222,7 @@ export function Technicians() {
               )}
             </TableBody>
           </Table>
-        </div>
+        </Card>
       </div>
 
       <CreateTechnicianDialog 

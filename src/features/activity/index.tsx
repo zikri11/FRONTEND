@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MoreHorizontalIcon, Copy, Check, Download } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -126,34 +127,44 @@ export function ActivityHistory() {
 
         <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
           <Table>
-            <TableHeader className='bg-muted/50'>
-              <TableRow>
-                <TableHead>Waktu</TableHead>
-                <TableHead>Aksi</TableHead>
-                <TableHead>Deskripsi</TableHead>
-                <TableHead>Server</TableHead>
-                <TableHead className='text-right'>Aksi Detail</TableHead>
+            <TableHeader>
+              <TableRow className='hover:bg-transparent'>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Waktu
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Aksi
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Deskripsi
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Server
+                </TableHead>
+                <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                  Aksi Detail
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isPending ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
                     Memuat riwayat aktivitas...
                   </TableCell>
                 </TableRow>
               ) : isError ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">
-                    <p className="text-muted-foreground">Gagal memuat riwayat aktivitas.</p>
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    <p className="text-sm text-muted-foreground">Gagal memuat riwayat aktivitas.</p>
                     <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
                       Coba Lagi
                     </Button>
                   </TableCell>
                 </TableRow>
               ) : activityLogs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
                     Belum ada riwayat aktivitas.
                   </TableCell>
                 </TableRow>
@@ -164,21 +175,24 @@ export function ActivityHistory() {
                   const desc = truncateWords(descFull)
                   return (
                   <TableRow key={log.id}>
-                    <TableCell className='font-mono text-xs text-muted-foreground'>
+                    <TableCell className='font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                       {new Date(log.createdAt).toLocaleString('id-ID', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                        action.startsWith('CREATE') || action.startsWith('ADD') || action.startsWith('SYNC') || action.endsWith('CREATED')
-                          ? 'bg-success/10 text-success ring-success/20'
-                          : action.startsWith('DELETE') || action.endsWith('DELETED') || action.includes('FAILED')
-                          ? 'bg-error/10 text-error ring-error/20'
-                          : 'bg-info/10 text-info ring-info/20'
-                      }`}>
+                      <Badge
+                        size='sm'
+                        variant={
+                          action.startsWith('CREATE') || action.startsWith('ADD') || action.startsWith('SYNC') || action.endsWith('CREATED')
+                            ? 'success-light'
+                            : action.startsWith('DELETE') || action.endsWith('DELETED') || action.includes('FAILED')
+                              ? 'destructive-light'
+                              : 'info-light'
+                        }
+                      >
                         {action || '-'}
-                      </span>
+                      </Badge>
                     </TableCell>
-                    <TableCell className='font-medium max-w-[300px] sm:max-w-none'>
+                    <TableCell className='text-sm text-foreground max-w-[300px] sm:max-w-none'>
                       {desc.truncated ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -192,7 +206,7 @@ export function ActivityHistory() {
                         descFull
                       )}
                     </TableCell>
-                    <TableCell className='text-muted-foreground'>{log.server?.name || '-'}</TableCell>
+                    <TableCell className='text-sm text-muted-foreground'>{log.server?.name || '-'}</TableCell>
                     <TableCell className='text-right'>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

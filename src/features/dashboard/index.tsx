@@ -312,7 +312,9 @@ export function Dashboard() {
                 <div className='w-full overflow-x-auto pb-2'>
                   <TabsList>
                     <TabsTrigger value='overview'>Overview</TabsTrigger>
-                    <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+                    <TabsTrigger value='analytics'>
+                      {isOwner ? 'Monitoring' : 'Analytics'}
+                    </TabsTrigger>
                     {!isOwner && (
                       <>
                         <TabsTrigger value='reports' disabled>

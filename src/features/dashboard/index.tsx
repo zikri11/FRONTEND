@@ -12,6 +12,7 @@ import { qk } from '@/lib/query-keys'
 import { computeTrafficRate } from '@/lib/traffic-rate'
 import { parseMikrotikTime } from '@/lib/mikrotik-time'
 import { useMonitoringSocket } from '@/hooks/use-monitoring-socket'
+import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -352,9 +353,26 @@ export function Dashboard() {
                           <div className='text-2xl font-semibold tracking-tight tabular-nums'>
                             3
                           </div>
-                          <p className='text-xs text-muted-foreground'>
-                            outlet aktif terdaftar
-                          </p>
+                          <div className='mt-1 flex items-center gap-1.5'>
+                            <Badge variant='success-light' size='sm'>
+                              <svg
+                                xmlns='http://www.w3.org/2000/svg'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                strokeWidth='2'
+                              >
+                                <path d='M16 7h6v6' />
+                                <path d='m22 7-8.5 8.5-5-5L2 17' />
+                              </svg>
+                              +1
+                            </Badge>
+                            <span className='text-xs text-muted-foreground'>
+                              outlet baru bulan ini
+                            </span>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
@@ -382,9 +400,26 @@ export function Dashboard() {
                           <div className='text-2xl font-semibold tracking-tight tabular-nums'>
                             6
                           </div>
-                          <p className='text-xs text-muted-foreground'>
-                            transaksi terbaru dari seluruh outlet
-                          </p>
+                          <div className='mt-1 flex items-center gap-1.5'>
+                            <Badge variant='success-light' size='sm'>
+                              <svg
+                                xmlns='http://www.w3.org/2000/svg'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                strokeWidth='2'
+                              >
+                                <path d='M16 7h6v6' />
+                                <path d='m22 7-8.5 8.5-5-5L2 17' />
+                              </svg>
+                              +40
+                            </Badge>
+                            <span className='text-xs text-muted-foreground'>
+                              lebih banyak dari minggu kemarin
+                            </span>
+                          </div>
                         </CardContent>
                       </Card>
                     ) : (
@@ -443,9 +478,32 @@ export function Dashboard() {
                         <div className='text-2xl font-semibold tracking-tight tabular-nums'>
                           {vouchers}
                         </div>
-                        <p className='text-xs text-muted-foreground'>
-                          total voucher dalam sistem
-                        </p>
+                        {isOwner ? (
+                          <div className='mt-1 flex items-center gap-1.5'>
+                            <Badge variant='success-light' size='sm'>
+                              <svg
+                                xmlns='http://www.w3.org/2000/svg'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                strokeWidth='2'
+                              >
+                                <path d='M16 7h6v6' />
+                                <path d='m22 7-8.5 8.5-5-5L2 17' />
+                              </svg>
+                              +120
+                            </Badge>
+                            <span className='text-xs text-muted-foreground'>
+                              lebih banyak dari minggu kemarin
+                            </span>
+                          </div>
+                        ) : (
+                          <p className='text-xs text-muted-foreground'>
+                            total voucher dalam sistem
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                     </Link>
@@ -473,9 +531,32 @@ export function Dashboard() {
                         <div className='text-2xl font-semibold tracking-tight tabular-nums'>
                           {usedVouchers}
                         </div>
-                        <p className='text-xs text-muted-foreground'>
-                          voucher yang sudah digunakan
-                        </p>
+                        {isOwner ? (
+                          <div className='mt-1 flex items-center gap-1.5'>
+                            <Badge variant='success-light' size='sm'>
+                              <svg
+                                xmlns='http://www.w3.org/2000/svg'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                strokeWidth='2'
+                              >
+                                <path d='M16 7h6v6' />
+                                <path d='m22 7-8.5 8.5-5-5L2 17' />
+                              </svg>
+                              +35
+                            </Badge>
+                            <span className='text-xs text-muted-foreground'>
+                              lebih banyak dari minggu kemarin
+                            </span>
+                          </div>
+                        ) : (
+                          <p className='text-xs text-muted-foreground'>
+                            voucher yang sudah digunakan
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                   </div>

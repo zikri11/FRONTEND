@@ -33,6 +33,7 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
 import { ChatBubble } from './components/chat-bubble'
+import { OutletStatusOverview } from './components/outlet-status-overview'
 import { RecentSales } from './components/recent-sales'
 import { RecentPosTransactions } from './components/recent-pos-transactions'
 import {
@@ -528,7 +529,7 @@ export function Dashboard() {
                   )}
                 </TabsContent>
                 <TabsContent value='analytics' className='space-y-4'>
-                  <Analytics />
+                  {isOwner ? <OutletStatusOverview /> : <Analytics />}
                 </TabsContent>
               </Tabs>
             </div>

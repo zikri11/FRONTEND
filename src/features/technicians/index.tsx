@@ -4,7 +4,7 @@ import { Header } from '@/components/layout/header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import {
   Table,
@@ -130,10 +130,10 @@ export function Technicians() {
       </Header>
 
       <div className={outerBoxClass}>
-        <div className='mb-6 flex items-center justify-between'>
+        <div className='flex items-center justify-between'>
           <div>
             <h1 className='text-2xl font-semibold tracking-tight'>Kelola Teknisi</h1>
-            <p className='text-muted-foreground'>
+            <p className='mt-1 text-sm text-muted-foreground'>
               Manajemen akun teknisi yang dapat mengelola router Anda.
             </p>
           </div>
@@ -148,11 +148,13 @@ export function Technicians() {
           </div>
         </div>
 
-        <Card className={`${nestedCardClass} shadow-md border`}>
+        <Card className={`${nestedCardClass} py-0`}>
+          <CardContent className='px-0'>
+          <div className='overflow-x-auto'>
           <Table>
             <TableHeader>
               <TableRow className='hover:bg-transparent'>
-                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                <TableHead className='ps-4 text-xs font-medium tracking-wide text-muted-foreground'>
                   Nama
                 </TableHead>
                 <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
@@ -164,7 +166,7 @@ export function Technicians() {
                 <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                   Tanggal Dibuat
                 </TableHead>
-                <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
                   Aksi
                 </TableHead>
               </TableRow>
@@ -191,7 +193,7 @@ export function Technicians() {
               ) : (
                 technicians.map((tech) => (
                   <TableRow key={tech.id}>
-                    <TableCell className='text-sm text-foreground'>{tech.name}</TableCell>
+                    <TableCell className='ps-4 text-sm text-foreground'>{tech.name}</TableCell>
                     <TableCell className='text-sm text-muted-foreground'>{tech.email}</TableCell>
                     <TableCell>
                       {tech.isActive ? (
@@ -213,7 +215,7 @@ export function Technicians() {
                         year: 'numeric'
                       })}
                     </TableCell>
-                    <TableCell className='text-right'>
+                    <TableCell className='pe-4 text-right'>
                       <Button variant='ghost' size='sm' onClick={() => handleEditClick(tech)}>Edit</Button>
                       <Button variant='ghost' size='sm' className='text-destructive' onClick={() => handleDeleteClick(tech)}>Hapus</Button>
                     </TableCell>
@@ -222,6 +224,8 @@ export function Technicians() {
               )}
             </TableBody>
           </Table>
+          </div>
+          </CardContent>
         </Card>
       </div>
 

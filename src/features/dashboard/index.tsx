@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { AxiosError } from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Lock, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { useServerStore } from '@/stores/server-store'
@@ -9,6 +10,7 @@ import { api } from '@/lib/axios'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { qk } from '@/lib/query-keys'
 import { computeTrafficRate } from '@/lib/traffic-rate'
+import { parseMikrotikTime } from '@/lib/mikrotik-time'
 import { useMonitoringSocket } from '@/hooks/use-monitoring-socket'
 import { Button } from '@/components/ui/button'
 import {
@@ -319,47 +321,108 @@ export function Dashboard() {
                 </div>
                 <TabsContent value='overview' className='relative space-y-4'>
                   <RouterLoadingOverlay show={dashboardIsLoading} />
-                  <div className='grid gap-4 sm:grid-cols-3'>
-                    <Card className={nestedCardClass}>
-                      <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium'>
-                          User Aktif
-                        </CardTitle>
-                        <svg
-                          xmlns='http://www.w3.org/2000/svg'
-                          viewBox='0 0 24 24'
-                          fill='none'
-                          stroke='currentColor'
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth='2'
-                          className='h-4 w-4 text-muted-foreground'
-                        >
-                          <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                        </svg>
-                      </CardHeader>
-                      <CardContent>
-                        {isForbidden ? (
-                          <div className='flex items-center gap-2 text-sm font-medium text-muted-foreground'>
-                            <Lock className='h-4 w-4' /> Akses Khusus Teknisi
+                  <div
+                    className={`grid gap-4 ${isOwner ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3'}`}
+                  >
+                    {isOwner && (
+                      <Card className={nestedCardClass}>
+                        <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                          <CardTitle className='text-sm font-medium'>
+                            Total Outlet
+                          </CardTitle>
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth='2'
+                            className='h-4 w-4 text-muted-foreground'
+                          >
+                            <path d='m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7' />
+                            <path d='M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8' />
+                            <path d='M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4' />
+                            <path d='M2 7h20' />
+                            <path d='M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7' />
+                          </svg>
+                        </CardHeader>
+                        <CardContent>
+                          <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                            3
                           </div>
-                        ) : (
-                          <>
+                          <p className='text-xs text-muted-foreground'>
+                            outlet aktif terdaftar
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {isOwner ? (
+                      <Card className={nestedCardClass}>
+                        <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                          <CardTitle className='text-sm font-medium'>
+                            Total Transaksi POS
+                          </CardTitle>
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth='2'
+                            className='h-4 w-4 text-muted-foreground'
+                          >
+                            <rect width="20" height="14" x="2" y="5" rx="2" />
+                            <line x1="2" x2="22" y1="10" y2="10" />
+                          </svg>
+                        </CardHeader>
+                        <CardContent>
+                          <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                            6
+                          </div>
+                          <p className='text-xs text-muted-foreground'>
+                            transaksi terbaru dari seluruh outlet
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Link to='/active-users' className='block transition-transform active:scale-[0.98]'>
+                        <Card className={`${nestedCardClass} h-full hover:bg-muted/30 transition-colors`}>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              User Aktif
+                            </CardTitle>
+                            <svg
+                              xmlns='http://www.w3.org/2000/svg'
+                              viewBox='0 0 24 24'
+                              fill='none'
+                              stroke='currentColor'
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth='2'
+                              className='h-4 w-4 text-muted-foreground'
+                            >
+                              <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
+                            </svg>
+                          </CardHeader>
+                          <CardContent>
                             <div className='text-2xl font-semibold tracking-tight tabular-nums'>
                               {activeUsersList.length}
                             </div>
                             <p className='text-xs text-muted-foreground'>
                               pelanggan terhubung saat ini
                             </p>
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-                    <Card className={nestedCardClass}>
-                      <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                        <CardTitle className='text-sm font-medium'>
-                          Voucher
-                        </CardTitle>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    )}
+                    <Link to='/vouchers' className='block transition-transform active:scale-[0.98]'>
+                      <Card className={`${nestedCardClass} h-full hover:bg-muted/30 transition-colors`}>
+                        <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                          <CardTitle className='text-sm font-medium'>
+                            Voucher
+                          </CardTitle>
                         <svg
                           xmlns='http://www.w3.org/2000/svg'
                           viewBox='0 0 24 24'
@@ -384,6 +447,7 @@ export function Dashboard() {
                         </p>
                       </CardContent>
                     </Card>
+                    </Link>
                     <Card className={nestedCardClass}>
                       <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                         <CardTitle className='text-sm font-medium'>
@@ -414,45 +478,47 @@ export function Dashboard() {
                       </CardContent>
                     </Card>
                   </div>
-                  <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-                    <RouterHealthPanel
-                      className={`col-span-1 lg:col-span-3 ${nestedCardClass}`}
-                      resources={resources}
-                      hasTraffic={traffic.length > 0}
-                      trafficRate={trafficRate}
-                      isForbidden={isForbidden}
-                      isLive={!!resources}
-                      liveMode={liveMode}
-                      host={activeServer?.host}
-                      port={activeServer?.port}
-                      lastStatus={activeServer?.lastStatus}
-                      lastCheckedAt={activeServer?.lastCheckedAt}
-                    />
-                    <Card
-                      className={`col-span-1 lg:col-span-4 ${nestedCardClass}`}
-                    >
+                  {isOwner ? (
+                    <Card className={nestedCardClass}>
                       <CardHeader>
-                        <CardTitle>
-                          {isOwner ? 'Transaksi POS Terbaru' : 'Pengguna Aktif'}
-                        </CardTitle>
-                        <CardDescription>
-                          {isOwner
-                            ? 'Riwayat transaksi terbaru dari sistem POS'
-                            : 'Pelanggan terhubung saat ini'}
-                        </CardDescription>
+                        <CardTitle>Transaksi POS Terbaru</CardTitle>
+                        <CardDescription>Riwayat transaksi terbaru dari sistem POS</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isOwner ? (
-                          <RecentPosTransactions />
-                        ) : (
-                          <RecentSales
-                            data={activeUsersList}
-                            isForbidden={isForbidden}
-                          />
-                        )}
+                        <RecentPosTransactions />
                       </CardContent>
                     </Card>
-                  </div>
+                  ) : (
+                    <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
+                      <RouterHealthPanel
+                        className={`col-span-1 lg:col-span-3 ${nestedCardClass}`}
+                        resources={resources}
+                        hasTraffic={traffic.length > 0}
+                        trafficRate={trafficRate}
+                        isForbidden={isForbidden}
+                        isLive={!!resources}
+                        liveMode={liveMode}
+                        host={activeServer?.host}
+                        port={activeServer?.port}
+                        lastStatus={activeServer?.lastStatus}
+                        lastCheckedAt={activeServer?.lastCheckedAt}
+                      />
+                      <Card className={`col-span-1 lg:col-span-4 ${nestedCardClass}`}>
+                        <CardHeader>
+                          <CardTitle>Pengguna Aktif</CardTitle>
+                          <CardDescription>Pelanggan terhubung saat ini</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <RecentSales
+                            data={[...activeUsersList]
+                              .sort((a, b) => parseMikrotikTime(a.uptime) - parseMikrotikTime(b.uptime))
+                              .slice(0, 5)}
+                            isForbidden={isForbidden}
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
                 </TabsContent>
                 <TabsContent value='analytics' className='space-y-4'>
                   <Analytics />

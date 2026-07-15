@@ -114,11 +114,19 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Wajib</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Field
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Tipe
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Wajib
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Keterangan
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,11 +157,19 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Wajib</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Field
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Tipe
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Wajib
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Keterangan
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -208,11 +224,19 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Wajib</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Field
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Tipe
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Wajib
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Keterangan
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -291,11 +315,19 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Wajib</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Field
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Tipe
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Wajib
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Keterangan
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -321,11 +353,19 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Wajib</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Field
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Tipe
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Wajib
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Keterangan
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -401,11 +441,19 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Wajib</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Field
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Tipe
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Wajib
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Keterangan
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -473,9 +521,13 @@ export function Docs() {
           <div className="my-6 w-full overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Kode</TableHead>
-                  <TableHead>Arti</TableHead>
+                <TableRow className='hover:bg-transparent'>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Kode
+                  </TableHead>
+                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                    Arti
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

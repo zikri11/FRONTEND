@@ -195,35 +195,47 @@ export function Keys() {
 
             <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
               <Table>
-                <TableHeader className='bg-muted/50'>
-                  <TableRow>
-                    <TableHead>Nama Outlet</TableHead>
-                    <TableHead>Server</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead>Terakhir Digunakan</TableHead>
-                    <TableHead className='text-right'>Aksi</TableHead>
+                <TableHeader>
+                  <TableRow className='hover:bg-transparent'>
+                    <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                      Nama Outlet
+                    </TableHead>
+                    <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                      Server
+                    </TableHead>
+                    <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                      Status
+                    </TableHead>
+                    <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                      Dibuat
+                    </TableHead>
+                    <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                      Terakhir Digunakan
+                    </TableHead>
+                    <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                      Aksi
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isPending ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className='text-center py-6 text-muted-foreground'>
+                    <TableRow className='hover:bg-transparent'>
+                      <TableCell colSpan={6} className='h-24 text-center text-sm text-muted-foreground'>
                         Memuat API key...
                       </TableCell>
                     </TableRow>
                   ) : isError ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className='text-center py-6'>
-                        <p className='text-muted-foreground'>Gagal memuat API key.</p>
+                    <TableRow className='hover:bg-transparent'>
+                      <TableCell colSpan={6} className='h-24 text-center'>
+                        <p className='text-sm text-muted-foreground'>Gagal memuat API key.</p>
                         <Button variant='outline' size='sm' className='mt-2' onClick={() => refetch()}>
                           Coba Lagi
                         </Button>
                       </TableCell>
                     </TableRow>
                   ) : keys.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className='text-center py-6 text-muted-foreground'>
+                    <TableRow className='hover:bg-transparent'>
+                      <TableCell colSpan={6} className='h-24 text-center text-sm text-muted-foreground'>
                         Belum ada API key untuk router ini.
                       </TableCell>
                     </TableRow>
@@ -236,12 +248,12 @@ export function Keys() {
                               <KeyRound className='text-muted-foreground size-4' aria-hidden='true' />
                             </div>
                             <div className='flex flex-col'>
-                              <span className='text-sm font-medium'>{key.label}</span>
+                              <span className='text-sm text-foreground'>{key.label}</span>
                               <span className='text-muted-foreground font-mono text-xs'>{key.maskedKey}</span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className='text-muted-foreground'>{key.serverName || '-'}</TableCell>
+                        <TableCell className='text-sm text-muted-foreground'>{key.serverName || '-'}</TableCell>
                         <TableCell>
                           {key.isActive ? (
                             <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
@@ -253,8 +265,8 @@ export function Keys() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className='text-muted-foreground'>{formatDate(key.createdAt)}</TableCell>
-                        <TableCell className='text-muted-foreground'>{formatDate(key.lastUsedAt)}</TableCell>
+                        <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>{formatDate(key.createdAt)}</TableCell>
+                        <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>{formatDate(key.lastUsedAt)}</TableCell>
                         <TableCell className='text-right'>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

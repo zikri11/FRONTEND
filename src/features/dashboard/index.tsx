@@ -313,12 +313,16 @@ export function Dashboard() {
                   <TabsList>
                     <TabsTrigger value='overview'>Overview</TabsTrigger>
                     <TabsTrigger value='analytics'>Analytics</TabsTrigger>
-                    <TabsTrigger value='reports' disabled>
-                      Reports
-                    </TabsTrigger>
-                    <TabsTrigger value='notifications' disabled>
-                      Notifications
-                    </TabsTrigger>
+                    {!isOwner && (
+                      <>
+                        <TabsTrigger value='reports' disabled>
+                          Reports
+                        </TabsTrigger>
+                        <TabsTrigger value='notifications' disabled>
+                          Notifications
+                        </TabsTrigger>
+                      </>
+                    )}
                   </TabsList>
                 </div>
                 <TabsContent value='overview' className='relative space-y-4'>

@@ -479,15 +479,22 @@ export function Dashboard() {
                     </Card>
                   </div>
                   {isOwner ? (
-                    <Card className={nestedCardClass}>
-                      <CardHeader>
-                        <CardTitle>Transaksi POS Terbaru</CardTitle>
-                        <CardDescription>Riwayat transaksi terbaru dari sistem POS</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <RecentPosTransactions />
-                      </CardContent>
-                    </Card>
+                    <Link
+                      to='/pos-transactions'
+                      className='block transition-transform active:scale-[0.98]'
+                    >
+                      <Card
+                        className={`${nestedCardClass} hover:bg-muted/30 transition-colors`}
+                      >
+                        <CardHeader>
+                          <CardTitle>Transaksi POS Terbaru</CardTitle>
+                          <CardDescription>Riwayat transaksi terbaru dari sistem POS</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <RecentPosTransactions />
+                        </CardContent>
+                      </Card>
+                    </Link>
                   ) : (
                     <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
                       <RouterHealthPanel

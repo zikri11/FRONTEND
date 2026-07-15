@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { nestedCardClass } from '@/lib/nested-box'
+import { Badge } from '@/components/reui/badge'
 import {
   Card,
   CardContent,
@@ -247,27 +248,22 @@ export function OutletStatusOverview() {
                       {outlet.name}
                     </TableCell>
                     <TableCell>
-                      <div className='flex items-center gap-2 whitespace-nowrap'>
-                        <span className='relative flex h-2.5 w-2.5'>
-                          <span
-                            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-                              outlet.status === 'online'
-                                ? 'bg-success'
-                                : 'bg-destructive'
-                            }`}
-                          ></span>
-                          <span
-                            className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
-                              outlet.status === 'online'
-                                ? 'bg-success'
-                                : 'bg-destructive'
-                            }`}
-                          ></span>
-                        </span>
-                        <span className='text-sm font-medium'>
-                          {outlet.status === 'online' ? 'Online' : 'Offline'}
-                        </span>
-                      </div>
+                      {outlet.status === 'online' ? (
+                        <Badge
+                          size='sm'
+                          className='border-success/20 bg-success/10 text-success'
+                        >
+                          Online
+                        </Badge>
+                      ) : (
+                        <Badge
+                          size='sm'
+                          variant='secondary'
+                          className='text-muted-foreground'
+                        >
+                          Offline
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className='font-mono text-sm tabular-nums'>
                       {outlet.availability}

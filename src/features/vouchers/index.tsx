@@ -514,8 +514,8 @@ export function Vouchers() {
                     className={`overflow-hidden rounded-xl border ${nestedCardClass}`}
                   >
                     <Table>
-                      <TableHeader className='bg-muted/50'>
-                        <TableRow>
+                      <TableHeader>
+                        <TableRow className='hover:bg-transparent'>
                           <TableHead className='w-12 text-center'>
                             <Checkbox
                               id='select-all-checkbox'
@@ -523,19 +523,31 @@ export function Vouchers() {
                               onCheckedChange={handleSelectAll}
                             />
                           </TableHead>
-                          <TableHead>Kode</TableHead>
-                          <TableHead>Paket</TableHead>
-                          <TableHead>Outlet</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Dibuat</TableHead>
-                          <TableHead className='text-right'>Aksi</TableHead>
+                          <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                            Kode
+                          </TableHead>
+                          <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                            Paket
+                          </TableHead>
+                          <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                            Outlet
+                          </TableHead>
+                          <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                            Status
+                          </TableHead>
+                          <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                            Dibuat
+                          </TableHead>
+                          <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                            Aksi
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {isError ? (
-                          <TableRow>
-                            <TableCell colSpan={7} className='py-6 text-center'>
-                              <p className='text-muted-foreground'>
+                          <TableRow className='hover:bg-transparent'>
+                            <TableCell colSpan={7} className='h-24 text-center'>
+                              <p className='text-sm text-muted-foreground'>
                                 Gagal mengambil data voucher.
                               </p>
                               <Button
@@ -549,10 +561,10 @@ export function Vouchers() {
                             </TableCell>
                           </TableRow>
                         ) : vouchers.length === 0 ? (
-                          <TableRow>
+                          <TableRow className='hover:bg-transparent'>
                             <TableCell
                               colSpan={7}
-                              className='py-6 text-center text-muted-foreground'
+                              className='h-24 text-center text-sm text-muted-foreground'
                             >
                               {debouncedSearch ||
                               profileFilter !== 'all' ||
@@ -589,7 +601,7 @@ export function Vouchers() {
                                     />
                                   </div>
                                   <div className='flex flex-col'>
-                                    <span className='font-mono text-sm font-medium'>
+                                    <span className='font-mono text-xs text-foreground'>
                                       {row.username || row.kode}
                                     </span>
                                     <span className='font-mono text-xs text-muted-foreground'>
@@ -598,10 +610,10 @@ export function Vouchers() {
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className='text-sm text-foreground'>
                                 {row.profile?.name || row.paket || '-'}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className='text-sm text-muted-foreground'>
                                 {row.outletName || row.outlet || '-'}
                               </TableCell>
                               <TableCell>
@@ -631,7 +643,7 @@ export function Vouchers() {
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className='text-muted-foreground'>
+                              <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                                 {new Date(row.createdAt).toLocaleDateString(
                                   'id-ID',
                                   {

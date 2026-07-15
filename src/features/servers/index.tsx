@@ -138,24 +138,32 @@ export function Servers() {
 
         <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>
           <Table>
-            <TableHeader className='bg-muted/50'>
-              <TableRow>
-                <TableHead>Router</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Protokol</TableHead>
-                <TableHead className='w-10 text-right'>Aksi</TableHead>
+            <TableHeader>
+              <TableRow className='hover:bg-transparent'>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Router
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Status
+                </TableHead>
+                <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  Protokol
+                </TableHead>
+                <TableHead className='w-10 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                  Aksi
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className='text-center py-6 text-muted-foreground'>
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={4} className='h-24 text-center text-sm text-muted-foreground'>
                     Memuat data router...
                   </TableCell>
                 </TableRow>
               ) : servers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className='text-center py-6 text-muted-foreground'>
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell colSpan={4} className='h-24 text-center text-sm text-muted-foreground'>
                     Belum ada router yang terdaftar.
                   </TableCell>
                 </TableRow>
@@ -168,7 +176,7 @@ export function Servers() {
                           <Server className='text-muted-foreground size-4' aria-hidden='true' />
                         </div>
                         <div className='flex flex-col'>
-                          <span className='text-sm font-medium'>{server.name}</span>
+                          <span className='text-sm text-foreground'>{server.name}</span>
                           <span className='text-muted-foreground font-mono text-xs'>
                             {server.host}:{server.port}
                           </span>

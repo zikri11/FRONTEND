@@ -166,21 +166,33 @@ export function Profiles() {
               >
                 <RouterLoadingOverlay show={isPending} />
                 <Table>
-                  <TableHeader className='bg-muted/50'>
-                    <TableRow>
-                      <TableHead>Profil</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Bandwidth</TableHead>
-                      <TableHead>Shared</TableHead>
-                      <TableHead>Masa Aktif</TableHead>
-                      <TableHead className='text-right'>Aksi</TableHead>
+                  <TableHeader>
+                    <TableRow className='hover:bg-transparent'>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Profil
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Status
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Bandwidth
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Shared
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Masa Aktif
+                      </TableHead>
+                      <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                        Aksi
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isError ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className='py-6 text-center'>
-                          <p className='text-muted-foreground'>
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell colSpan={6} className='h-24 text-center'>
+                          <p className='text-sm text-muted-foreground'>
                             Gagal memuat data profil.
                           </p>
                           <Button
@@ -194,10 +206,10 @@ export function Profiles() {
                         </TableCell>
                       </TableRow>
                     ) : profiles.length === 0 ? (
-                      <TableRow>
+                      <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={6}
-                          className='py-6 text-center text-muted-foreground'
+                          className='h-24 text-center text-sm text-muted-foreground'
                         >
                           Belum ada profil hotspot.
                         </TableCell>
@@ -216,7 +228,7 @@ export function Profiles() {
                                   />
                                 </div>
                                 <div className='flex flex-col'>
-                                  <span className='text-sm font-medium'>
+                                  <span className='text-sm text-foreground'>
                                     {profile.name}
                                   </span>
                                   <span className='text-xs text-muted-foreground'>
@@ -243,11 +255,15 @@ export function Profiles() {
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className='font-mono text-xs whitespace-nowrap'>
                               {up || '-'} / {down || '-'}
                             </TableCell>
-                            <TableCell>{profile.sharedUsers || 1}</TableCell>
-                            <TableCell>{profile.validity || '-'}</TableCell>
+                            <TableCell className='text-sm tabular-nums'>
+                              {profile.sharedUsers || 1}
+                            </TableCell>
+                            <TableCell className='font-mono text-xs whitespace-nowrap'>
+                              {profile.validity || '-'}
+                            </TableCell>
                             <TableCell className='text-right'>
                               {!isOwner && (
                                 <DropdownMenu>

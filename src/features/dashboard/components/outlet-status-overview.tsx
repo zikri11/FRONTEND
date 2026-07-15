@@ -236,7 +236,7 @@ export function OutletStatusOverview() {
                   <TableHead className='min-w-[280px] text-xs font-medium tracking-wide text-muted-foreground'>
                     Timeline (30 Hari)
                   </TableHead>
-                  <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                  <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                     Terakhir Offline
                   </TableHead>
                 </TableRow>
@@ -265,7 +265,7 @@ export function OutletStatusOverview() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className='font-mono text-sm tabular-nums'>
+                    <TableCell className='font-mono text-xs tabular-nums'>
                       {outlet.availability}
                     </TableCell>
                     <TableCell>
@@ -295,7 +295,7 @@ export function OutletStatusOverview() {
                         </div>
                       </TooltipProvider>
                     </TableCell>
-                    <TableCell className='text-sm text-muted-foreground whitespace-nowrap'>
+                    <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                       {outlet.lastOffline ?? '—'}
                     </TableCell>
                   </TableRow>

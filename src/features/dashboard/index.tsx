@@ -35,8 +35,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
 import { ChatBubble } from './components/chat-bubble'
 import { OutletStatusOverview } from './components/outlet-status-overview'
-import { PlatformActivity } from './components/platform-activity'
-import { ProblemRouters } from './components/problem-routers'
+import { PosTransactionsChart } from './components/pos-transactions-chart'
 import { SuperAdminStats } from './components/super-admin-stats'
 import { RecentSales } from './components/recent-sales'
 import { RecentPosTransactions } from './components/recent-pos-transactions'
@@ -595,10 +594,7 @@ export function Dashboard() {
                       </Card>
                     </Link>
                   ) : isSuperAdmin ? (
-                    <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-                      <PlatformActivity className='col-span-1 lg:col-span-4' />
-                      <ProblemRouters className='col-span-1 lg:col-span-3' />
-                    </div>
+                    <PosTransactionsChart />
                   ) : (
                     <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
                       <RouterHealthPanel

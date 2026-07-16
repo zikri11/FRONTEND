@@ -42,6 +42,14 @@ export function AppSidebar() {
               return false
             }
             if (
+              user?.role === 'SUPER_ADMIN' &&
+              ['Kelola Teknisi', 'Server', 'Developer', 'Riwayat Aktivitas'].includes(
+                item.title
+              )
+            ) {
+              return false
+            }
+            if (
               user?.role !== 'OWNER' &&
               (item.title === 'Transaksi POS' || item.title === 'Langganan')
             ) {

@@ -183,7 +183,11 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
   // buat voucher/profil existing (teknisi) yang membaca activeServerId dari store.
   const goCreate = (
-    to: '/vouchers/add-single' | '/vouchers/add-bulk' | '/profiles/add'
+    to:
+      | '/vouchers/add-single'
+      | '/vouchers/add-bulk'
+      | '/profiles/add'
+      | '/developer/keys'
   ) => {
     if (!router) return
     setActiveServerId(router.id)
@@ -302,11 +306,16 @@ export function RouterDetail({ routerId }: { routerId: string }) {
 
               {/* Integrasi POS */}
               <Card className={`${nestedCardClass} py-0`}>
-                <CardHeader className='pt-6'>
-                  <CardTitle>Integrasi POS</CardTitle>
-                  <CardDescription>
-                    API key kasir yang terikat ke router ini.
-                  </CardDescription>
+                <CardHeader className='flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between'>
+                  <div>
+                    <CardTitle>Integrasi POS</CardTitle>
+                    <CardDescription className='mt-1'>
+                      API key kasir yang terikat ke router ini.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => goCreate('/developer/keys')}>
+                    Buat API Key
+                  </Button>
                 </CardHeader>
                 <CardContent className='px-0'>
                   <div className='overflow-x-auto'>

@@ -4,11 +4,14 @@ import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Copy,
   MoreHorizontalIcon,
   SearchIcon,
   Trash2Icon,
+  TriangleAlert,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
@@ -103,6 +106,13 @@ type PosKey = {
   lastUsedAt?: string | null
 }
 
+// Key mentah — dikembalikan POST sekali, tak pernah disimpan
+type CreatedKey = {
+  id: string
+  label: string
+  key: string
+}
+
 function apiErrorMessage(error: unknown, fallback: string): string {
   const m =
     error instanceof AxiosError ? error.response?.data?.message : undefined
@@ -139,20 +149,52 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     setVouchers(buildVouchers(seed, generated, router.name))
   }
 
-  // Integrasi POS — data nyata GET /pos-keys (backend belum scope per server,
-  // filter client-side by serverId, seperti halaman /developer/keys).
-  const { data: allPosKeys = [] } = useQuery<PosKey[]>({
-    queryKey: ['pos-keys'],
+  // Integrasi POS — data nyata GET /pos-keys?serverId= (backend mendukung
+  // filter server-side + scope SA global; lihat pos-keys.service).
+  const { data: posKeys = [] } = useQuery<PosKey[]>({
+    queryKey: ['pos-keys', routerId],
     queryFn: ({ signal }) =>
-      api.get('/pos-keys', { signal }).then((r) => r.data),
+      api
+        .get('/pos-keys', { params: { serverId: routerId }, signal })
+        .then((r) => r.data),
     enabled: !!router,
   })
-  const posKeys = useMemo(
-    () => allPosKeys.filter((k) => k.serverId === routerId),
-    [allPosKeys, routerId]
-  )
   const invalidatePosKeys = () =>
-    queryClient.invalidateQueries({ queryKey: ['pos-keys'] })
+    queryClient.invalidateQueries({ queryKey: ['pos-keys', routerId] })
+
+  const [isCreateKeyOpen, setIsCreateKeyOpen] = useState(false)
+  const [newKeyLabel, setNewKeyLabel] = useState('')
+  const [revealedKey, setRevealedKey] = useState<CreatedKey | null>(null)
+  const [keyCopied, setKeyCopied] = useState(false)
+
+  const createKeyMutation = useMutation({
+    mutationFn: (label: string) =>
+      api
+        .post('/pos-keys', { label, serverId: routerId })
+        .then((r) => r.data as CreatedKey),
+    onSuccess: (data) => {
+      setIsCreateKeyOpen(false)
+      setNewKeyLabel('')
+      setKeyCopied(false)
+      setRevealedKey(data)
+      invalidatePosKeys()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal membuat API key')),
+  })
+
+  const submitCreateKey = () => {
+    if (!newKeyLabel.trim()) {
+      toast.error('Label / nama outlet wajib diisi')
+      return
+    }
+    createKeyMutation.mutate(newKeyLabel.trim())
+  }
+
+  const copyRawKey = () => {
+    if (!revealedKey) return
+    navigator.clipboard.writeText(revealedKey.key)
+    setKeyCopied(true)
+  }
 
   const toggleKeyMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
@@ -309,11 +351,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
   // buat voucher/profil existing (teknisi) yang membaca activeServerId dari store.
   const goCreate = (
-    to:
-      | '/vouchers/add-single'
-      | '/vouchers/add-bulk'
-      | '/profiles/add'
-      | '/developer/keys'
+    to: '/vouchers/add-single' | '/vouchers/add-bulk' | '/profiles/add'
   ) => {
     if (!router) return
     setActiveServerId(router.id)
@@ -427,7 +465,12 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                       API key kasir yang terikat ke router ini.
                     </CardDescription>
                   </div>
-                  <Button onClick={() => goCreate('/developer/keys')}>
+                  <Button
+                    onClick={() => {
+                      setNewKeyLabel('')
+                      setIsCreateKeyOpen(true)
+                    }}
+                  >
                     Buat API Key
                   </Button>
                 </CardHeader>
@@ -1032,6 +1075,92 @@ export function RouterDetail({ routerId }: { routerId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog buat API key POS */}
+      <Dialog open={isCreateKeyOpen} onOpenChange={setIsCreateKeyOpen}>
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Buat API Key Baru</DialogTitle>
+            <DialogDescription>
+              Key terikat ke router{' '}
+              <strong>{router?.name}</strong> — kasir yang memakainya hanya bisa
+              membuat voucher di sini.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-2 py-2'>
+            <Label htmlFor='key-label'>
+              Label / Nama Outlet <span className='text-destructive'>*</span>
+            </Label>
+            <Input
+              id='key-label'
+              placeholder='contoh: Kasir Cabang Pusat'
+              value={newKeyLabel}
+              onChange={(e) => setNewKeyLabel(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsCreateKeyOpen(false)}
+              disabled={createKeyMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={submitCreateKey}
+              disabled={createKeyMutation.isPending}
+            >
+              {createKeyMutation.isPending ? 'Membuat...' : 'Generate Key'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog reveal-once */}
+      <Dialog
+        open={!!revealedKey}
+        onOpenChange={(open) => !open && setRevealedKey(null)}
+      >
+        <DialogContent className='sm:max-w-[480px]'>
+          <DialogHeader>
+            <DialogTitle>API Key Berhasil Dibuat</DialogTitle>
+            <DialogDescription>
+              {revealedKey?.label
+                ? `Outlet: ${revealedKey.label}`
+                : 'Salin key ini sekarang.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-3 py-2'>
+            <div className='flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive'>
+              <TriangleAlert className='mt-0.5 h-4 w-4 shrink-0' />
+              <span>
+                Simpan key ini sekarang. Key mentah{' '}
+                <b>tidak akan ditampilkan lagi</b> setelah dialog ditutup.
+              </span>
+            </div>
+            <div className='flex items-center gap-2'>
+              <code className='flex-1 rounded bg-muted px-3 py-2 font-mono text-sm break-all'>
+                {revealedKey?.key}
+              </code>
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={copyRawKey}
+                aria-label='Salin key'
+              >
+                {keyCopied ? (
+                  <Check className='h-4 w-4 text-success' />
+                ) : (
+                  <Copy className='h-4 w-4' />
+                )}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setRevealedKey(null)}>Selesai & Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog edit profil (dummy) */}
       <Dialog

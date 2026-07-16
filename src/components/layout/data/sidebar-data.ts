@@ -97,7 +97,7 @@ export const sidebarData: SidebarData = {
           ],
         },
         {
-          title: 'AI Analis',
+          title: 'Tanya AI',
           url: '/chats',
           icon: Bot,
         },

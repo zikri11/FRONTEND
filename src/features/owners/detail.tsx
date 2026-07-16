@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { KeyRound, Router, Users } from 'lucide-react'
+import { ArrowLeft, KeyRound, Router, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { Badge } from '@/components/reui/badge'
 import {
@@ -144,12 +145,16 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
           ) : (
             <>
               <div>
-                <Link
-                  to='/users'
-                  className='text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground'
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-8 -ms-2 text-muted-foreground hover:text-foreground'
+                  asChild
                 >
-                  ← Kelola Owner
-                </Link>
+                  <Link to='/users' aria-label='Kembali ke Kelola Owner'>
+                    <ArrowLeft className='h-4 w-4' />
+                  </Link>
+                </Button>
                 <h2 className='mt-2 text-2xl font-semibold tracking-tight'>
                   {owner.name}
                 </h2>

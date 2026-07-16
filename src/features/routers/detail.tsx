@@ -663,55 +663,6 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                 </CardContent>
               </Card>
 
-              {/* Statistik voucher */}
-              <div className='grid gap-4 sm:grid-cols-3'>
-                <Card className={nestedCardClass}>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium'>
-                      Total Voucher
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-                      {totalVouchers}
-                    </div>
-                    <p className='text-xs text-muted-foreground'>
-                      seluruh voucher di router ini
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className={nestedCardClass}>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium'>
-                      Belum Dipakai
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-                      {unusedVouchers}
-                    </div>
-                    <p className='text-xs text-muted-foreground'>
-                      voucher masih aktif
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className={nestedCardClass}>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium'>
-                      Terpakai
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-                      {usedVouchers}
-                    </div>
-                    <p className='text-xs text-muted-foreground'>
-                      voucher sudah digunakan
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Profil hotspot */}
               <Card className={`${nestedCardClass} py-0`}>
                 <CardHeader className='flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between'>
@@ -817,6 +768,55 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Statistik voucher */}
+              <div className='grid gap-4 sm:grid-cols-3'>
+                <Card className={nestedCardClass}>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium'>
+                      Total Voucher
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                      {totalVouchers}
+                    </div>
+                    <p className='text-xs text-muted-foreground'>
+                      seluruh voucher di router ini
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className={nestedCardClass}>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium'>
+                      Belum Dipakai
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                      {unusedVouchers}
+                    </div>
+                    <p className='text-xs text-muted-foreground'>
+                      voucher masih aktif
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className={nestedCardClass}>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium'>
+                      Terpakai
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                      {usedVouchers}
+                    </div>
+                    <p className='text-xs text-muted-foreground'>
+                      voucher sudah digunakan
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Voucher */}
               <Card className={`${nestedCardClass} py-0`}>

@@ -51,6 +51,11 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
         },
         {
+          title: 'Kelola Owner',
+          url: '/users',
+          icon: Users,
+        },
+        {
           title: 'Transaksi POS',
           url: '/pos-transactions',
           icon: ReceiptText,

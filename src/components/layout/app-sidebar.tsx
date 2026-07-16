@@ -38,6 +38,9 @@ export function AppSidebar() {
             if (user?.role === 'TEKNISI' && item.title === 'Kelola Teknisi') {
               return false
             }
+            if (user?.role !== 'SUPER_ADMIN' && item.title === 'Kelola Owner') {
+              return false
+            }
             if (
               user?.role !== 'OWNER' &&
               (item.title === 'Transaksi POS' || item.title === 'Langganan')

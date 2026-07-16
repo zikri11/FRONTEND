@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { nestedCardClass } from '@/lib/nested-box'
 import { Badge } from '@/components/reui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +11,7 @@ type PlatformStat = {
   delta: string
   deltaCaption: string
   iconPaths: string[]
+  href?: '/users'
 }
 
 const STATS: PlatformStat[] = [
@@ -18,6 +20,7 @@ const STATS: PlatformStat[] = [
     value: '128',
     delta: '+12',
     deltaCaption: 'user baru bulan ini',
+    href: '/users',
     iconPaths: [
       'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2',
       'M22 21v-2a4 4 0 0 0-3-3.87',
@@ -63,8 +66,13 @@ const STATS: PlatformStat[] = [
 export function SuperAdminStats() {
   return (
     <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
-      {STATS.map((stat) => (
-        <Card key={stat.title} className={nestedCardClass}>
+      {STATS.map((stat) => {
+        const card = (
+          <Card
+            className={`${nestedCardClass} ${
+              stat.href ? 'h-full transition-colors hover:bg-muted/30' : ''
+            }`}
+          >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>{stat.title}</CardTitle>
             <svg
@@ -110,8 +118,20 @@ export function SuperAdminStats() {
               </span>
             </div>
           </CardContent>
-        </Card>
-      ))}
+          </Card>
+        )
+        return stat.href ? (
+          <Link
+            key={stat.title}
+            to={stat.href}
+            className='block transition-transform active:scale-[0.98]'
+          >
+            {card}
+          </Link>
+        ) : (
+          <div key={stat.title}>{card}</div>
+        )
+      })}
     </div>
   )
 }

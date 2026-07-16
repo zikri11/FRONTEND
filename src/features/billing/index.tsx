@@ -37,10 +37,20 @@ const CURRENT_PLAN = {
 }
 
 const USAGE = [
+  // 3 kondisi contoh: normal (<=85%), hampir penuh (>85% → oren), penuh (100% → merah)
   { label: 'Router', used: 18, limit: 25, unit: 'router', icon: Router },
-  { label: 'Teknisi', used: 4, limit: 10, unit: 'teknisi', icon: Users },
-  { label: 'API Key', used: 7, limit: 15, unit: 'API key', icon: KeyRound },
+  { label: 'Teknisi', used: 9, limit: 10, unit: 'teknisi', icon: Users },
+  { label: 'API Key', used: 15, limit: 15, unit: 'API key', icon: KeyRound },
 ]
+
+// >85% = warning (hampir penuh), 100% = destructive (kuota habis)
+function progressStateClass(pct: number): string {
+  if (pct >= 100)
+    return 'bg-destructive/20 [&>[data-slot=progress-indicator]]:bg-destructive'
+  if (pct > 85)
+    return 'bg-warning/20 [&>[data-slot=progress-indicator]]:bg-warning'
+  return ''
+}
 
 type InvoiceStatus = 'Lunas' | 'Pending' | 'Gagal'
 
@@ -144,7 +154,10 @@ export function BillingPage() {
                         {pct}%
                       </span>
                     </div>
-                    <Progress value={pct} className='mt-2 h-2' />
+                    <Progress
+                      value={pct}
+                      className={`mt-2 h-2 ${progressStateClass(pct)}`}
+                    />
                     <p className='mt-2 text-xs text-muted-foreground tabular-nums'>
                       {item.used} dari {item.limit} {item.unit}
                     </p>

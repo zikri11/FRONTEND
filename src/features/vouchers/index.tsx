@@ -448,49 +448,45 @@ export function Vouchers() {
                       />
                     </div>
                     <div className='flex w-full gap-2 sm:w-auto'>
-                      <div className='w-full sm:w-[180px]'>
-                        <Select
-                          value={profileFilter}
-                          onValueChange={(v) => {
-                            setProfileFilter(v)
-                            setCurrentPage(1)
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder='Filter Profil' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='all'>Semua Profil</SelectItem>
-                            {profiles.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className='w-full sm:w-[160px]'>
-                        <Select
-                          value={statusFilter}
-                          onValueChange={(v) => {
-                            setStatusFilter(v)
-                            setCurrentPage(1)
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder='Filter Status' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='all'>Semua Status</SelectItem>
-                            <SelectItem value='UNUSED'>
-                              Belum Dipakai
+                      <Select
+                        value={profileFilter}
+                        onValueChange={(v) => {
+                          setProfileFilter(v)
+                          setCurrentPage(1)
+                        }}
+                      >
+                        <SelectTrigger className='w-full sm:w-[180px]'>
+                          <SelectValue placeholder='Filter Profil' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='all'>Semua Profil</SelectItem>
+                          {profiles.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
                             </SelectItem>
-                            <SelectItem value='USED'>Terpakai</SelectItem>
-                            <SelectItem value='REVOKED'>Dicabut</SelectItem>
-                            <SelectItem value='EXPIRED'>Kedaluwarsa</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={statusFilter}
+                        onValueChange={(v) => {
+                          setStatusFilter(v)
+                          setCurrentPage(1)
+                        }}
+                      >
+                        <SelectTrigger className='w-full sm:w-[160px]'>
+                          <SelectValue placeholder='Filter Status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='all'>Semua Status</SelectItem>
+                          <SelectItem value='UNUSED'>
+                            Belum Dipakai
+                          </SelectItem>
+                          <SelectItem value='USED'>Terpakai</SelectItem>
+                          <SelectItem value='REVOKED'>Dicabut</SelectItem>
+                          <SelectItem value='EXPIRED'>Kedaluwarsa</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

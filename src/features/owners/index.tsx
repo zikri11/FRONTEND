@@ -70,7 +70,7 @@ const PAGE_SIZES = [10, 25, 50, 100]
 function PlanBadge({ plan }: { plan: PlanTier }) {
   if (plan === 'Pro') {
     return (
-      <Badge size='sm' variant='primary-light'>
+      <Badge size='sm' variant='warning-light'>
         Pro
       </Badge>
     )

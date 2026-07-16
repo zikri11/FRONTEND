@@ -69,6 +69,7 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { DetailRow, ProtocolBadge, StatusBadge } from './components'
 import {
+  buildPosKeys,
   buildProfiles,
   buildVouchers,
   type VoucherRow,
@@ -86,6 +87,10 @@ export function RouterDetail({ routerId }: { routerId: string }) {
 
   const profiles = useMemo(
     () => (router ? buildProfiles(routerIndex) : []),
+    [router, routerIndex]
+  )
+  const posKeys = useMemo(
+    () => (router ? buildPosKeys(routerIndex) : []),
     [router, routerIndex]
   )
   const [vouchers, setVouchers] = useState<VoucherRow[]>(() =>
@@ -291,6 +296,83 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                         {router.dnsName ?? '—'}
                       </span>
                     </DetailRow>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Integrasi POS */}
+              <Card className={`${nestedCardClass} py-0`}>
+                <CardHeader className='pt-6'>
+                  <CardTitle>Integrasi POS</CardTitle>
+                  <CardDescription>
+                    API key kasir yang terikat ke router ini.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='px-0'>
+                  <div className='overflow-x-auto'>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className='hover:bg-transparent'>
+                          <TableHead className='ps-4 text-xs font-medium tracking-wide text-muted-foreground'>
+                            Outlet
+                          </TableHead>
+                          <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                            Status
+                          </TableHead>
+                          <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                            Terakhir Digunakan
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {posKeys.length === 0 ? (
+                          <TableRow className='hover:bg-transparent'>
+                            <TableCell
+                              colSpan={3}
+                              className='h-24 text-center text-sm text-muted-foreground'
+                            >
+                              Belum ada API key untuk router ini.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          posKeys.map((key) => (
+                            <TableRow key={key.id}>
+                              <TableCell className='ps-4'>
+                                <div className='flex flex-col whitespace-nowrap'>
+                                  <span className='text-sm text-foreground'>
+                                    {key.label}
+                                  </span>
+                                  <span className='font-mono text-xs text-muted-foreground'>
+                                    {key.maskedKey}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {key.isActive ? (
+                                  <Badge
+                                    size='sm'
+                                    className='border-success/20 bg-success/10 text-success'
+                                  >
+                                    Aktif
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    size='sm'
+                                    variant='secondary'
+                                    className='text-muted-foreground'
+                                  >
+                                    Nonaktif
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className='pe-4 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
+                                {key.lastUsedAt ?? '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

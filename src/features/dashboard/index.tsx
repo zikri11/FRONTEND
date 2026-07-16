@@ -173,9 +173,11 @@ export function Dashboard() {
     refetchInterval: 3000,
   })
 
-  // REST fallback (dan jalur OWNER) — polled every 3s (against the backend,
-  // not the router directly). queryFn never throws, so failures show as
-  // isDisconnected. No-op kalau WS sedang 'live'.
+  // REST fallback non-owner — polled every 3s (against the backend, not the
+  // router directly). queryFn never throws, so failures show as
+  // isDisconnected. No-op kalau WS sedang 'live'. OWNER tidak pernah memanggil
+  // /monitoring/* — dashboard-nya murni data database, router mati pun tetap
+  // render (spec 2026-07-16-owner-dashboard-db-only).
   const {
     data: metrics = EMPTY_METRICS,
     isPending,
@@ -185,7 +187,7 @@ export function Dashboard() {
     queryFn: ({ signal }) =>
       fetchDashboardMetrics(activeServerId as string, signal),
     enabled:
-      !!activeServerId && (isOwner || wsResult.wsStatus === 'unavailable'),
+      !!activeServerId && !isOwner && wsResult.wsStatus === 'unavailable',
     refetchInterval: 3000,
   })
 
@@ -215,10 +217,13 @@ export function Dashboard() {
         : 'polling'
 
   // Overlay loading saat ganti router: ikut isPending REST kalau WS belum
-  // atau tidak live (termasuk OWNER, WS-nya permanen disabled). Kalau WS
-  // sudah live, data sudah datang lewat WS — tidak dianggap loading lagi.
-  const dashboardIsLoading =
-    isOwner || wsResult.wsStatus !== 'live' ? isPending : false
+  // atau tidak live. OWNER selalu false — query metrics-nya disabled dan
+  // query disabled berstatus isPending permanen (overlay bakal nyangkut).
+  const dashboardIsLoading = isOwner
+    ? false
+    : wsResult.wsStatus !== 'live'
+      ? isPending
+      : false
 
   const handleRetry = async () => {
     setIsRetrying(true)
@@ -292,17 +297,19 @@ export function Dashboard() {
                 <h1 className='text-2xl font-semibold tracking-tight'>
                   Dashboard
                 </h1>
-                <div className='flex items-center space-x-2'>
-                  <Button
-                    onClick={() => syncMutation.mutate()}
-                    disabled={isSyncing}
-                  >
-                    <RefreshCw
-                      className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
-                    />
-                    {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
-                  </Button>
-                </div>
+                {!isOwner && (
+                  <div className='flex items-center space-x-2'>
+                    <Button
+                      onClick={() => syncMutation.mutate()}
+                      disabled={isSyncing}
+                    >
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+                      />
+                      {isSyncing ? 'Mensinkronkan...' : 'Sinkron'}
+                    </Button>
+                  </div>
+                )}
               </div>
               <Tabs
                 orientation='vertical'

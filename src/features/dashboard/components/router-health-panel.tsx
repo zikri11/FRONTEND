@@ -50,6 +50,10 @@ export type SnapshotActiveUser = {
   ipAddress?: string
   macAddress?: string
   uptime?: string
+  bytesIn?: number
+  bytesOut?: number
+  sessionTimeLeft?: string
+  idleTime?: string
 }
 
 type Props = {

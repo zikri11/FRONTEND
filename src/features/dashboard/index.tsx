@@ -35,6 +35,9 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { Analytics } from './components/analytics'
 import { ChatBubble } from './components/chat-bubble'
 import { OutletStatusOverview } from './components/outlet-status-overview'
+import { PlatformActivity } from './components/platform-activity'
+import { ProblemRouters } from './components/problem-routers'
+import { SuperAdminStats } from './components/super-admin-stats'
 import { RecentSales } from './components/recent-sales'
 import { RecentPosTransactions } from './components/recent-pos-transactions'
 import {
@@ -139,10 +142,13 @@ export function Dashboard() {
 
   const role = useAuthStore((s) => s.auth.user?.role)
   const isOwner = role === 'OWNER'
+  // SA juga lepas dari router terpilih — dashboard platform-level, murni dummy/DB
+  // (spec 2026-07-16-superadmin-dashboard).
+  const isSuperAdmin = role === 'SUPER_ADMIN'
 
   // WS primer untuk resources/active users/traffic — OWNER tetap 100% di
   // jalur REST lama (kontrak WS+RBAC belum terkonfirmasi backend), lihat B7.
-  const wsResult = useMonitoringSocket(activeServerId, !isOwner)
+  const wsResult = useMonitoringSocket(activeServerId, !isOwner && !isSuperAdmin)
   const useWsData = !isOwner && wsResult.wsStatus === 'live'
 
   // Jumlah voucher: dipisah dari fetchDashboardMetrics, selalu aktif tak
@@ -156,7 +162,7 @@ export function Dashboard() {
           signal,
         })
         .then((r) => r.data?.meta?.total || 0),
-    enabled: !!activeServerId,
+    enabled: !!activeServerId && !isSuperAdmin,
     refetchInterval: 3000,
   })
 
@@ -169,7 +175,7 @@ export function Dashboard() {
           signal,
         })
         .then((r) => r.data?.meta?.total || 0),
-    enabled: !!activeServerId,
+    enabled: !!activeServerId && !isSuperAdmin,
     refetchInterval: 3000,
   })
 
@@ -187,7 +193,10 @@ export function Dashboard() {
     queryFn: ({ signal }) =>
       fetchDashboardMetrics(activeServerId as string, signal),
     enabled:
-      !!activeServerId && !isOwner && wsResult.wsStatus === 'unavailable',
+      !!activeServerId &&
+      !isOwner &&
+      !isSuperAdmin &&
+      wsResult.wsStatus === 'unavailable',
     refetchInterval: 3000,
   })
 
@@ -219,11 +228,12 @@ export function Dashboard() {
   // Overlay loading saat ganti router: ikut isPending REST kalau WS belum
   // atau tidak live. OWNER selalu false — query metrics-nya disabled dan
   // query disabled berstatus isPending permanen (overlay bakal nyangkut).
-  const dashboardIsLoading = isOwner
-    ? false
-    : wsResult.wsStatus !== 'live'
-      ? isPending
-      : false
+  const dashboardIsLoading =
+    isOwner || isSuperAdmin
+      ? false
+      : wsResult.wsStatus !== 'live'
+        ? isPending
+        : false
 
   const handleRetry = async () => {
     setIsRetrying(true)
@@ -274,7 +284,7 @@ export function Dashboard() {
 
       {/* ===== Main ===== */}
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        {!isLoading && !activeServerId ? (
+        {!isLoading && !activeServerId && !isSuperAdmin ? (
           <EmptyRouterPlaceholder />
         ) : metrics.isNotFound ? (
           <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
@@ -297,7 +307,7 @@ export function Dashboard() {
                 <h1 className='text-2xl font-semibold tracking-tight'>
                   Dashboard
                 </h1>
-                {!isOwner && (
+                {!isOwner && !isSuperAdmin && (
                   <div className='flex items-center space-x-2'>
                     <Button
                       onClick={() => syncMutation.mutate()}
@@ -336,6 +346,9 @@ export function Dashboard() {
                 </div>
                 <TabsContent value='overview' className='relative space-y-4'>
                   <RouterLoadingOverlay show={dashboardIsLoading} />
+                  {isSuperAdmin ? (
+                    <SuperAdminStats />
+                  ) : (
                   <div
                     className={`grid gap-4 ${isOwner ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3'}`}
                   >
@@ -563,6 +576,7 @@ export function Dashboard() {
                       </CardContent>
                     </Card>
                   </div>
+                  )}
                   {isOwner ? (
                     <Link
                       to='/pos-transactions'
@@ -580,6 +594,11 @@ export function Dashboard() {
                         </CardContent>
                       </Card>
                     </Link>
+                  ) : isSuperAdmin ? (
+                    <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
+                      <PlatformActivity className='col-span-1 lg:col-span-4' />
+                      <ProblemRouters className='col-span-1 lg:col-span-3' />
+                    </div>
                   ) : (
                     <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
                       <RouterHealthPanel

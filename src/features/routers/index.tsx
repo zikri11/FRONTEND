@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import {
   ChevronLeft,
   ChevronRight,
-  Eye,
-  EyeOff,
   MoreHorizontalIcon,
   SearchIcon,
-  ShieldAlert,
-  ShieldCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
-import { Badge } from '@/components/reui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +22,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -63,73 +58,13 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import {
-  DUMMY_ROUTERS,
-  type RouterRow,
-  type RouterStatus,
-} from './data/dummy-routers'
+import { ProtocolBadge, StatusBadge } from './components'
+import { DUMMY_ROUTERS, type RouterRow } from './data/dummy-routers'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
-function StatusBadge({ status }: { status: RouterStatus }) {
-  if (status === 'ONLINE') {
-    return (
-      <Badge size='sm' className='border-success/20 bg-success/10 text-success'>
-        Online
-      </Badge>
-    )
-  }
-  if (status === 'OFFLINE') {
-    return (
-      <Badge size='sm' variant='secondary' className='text-muted-foreground'>
-        Offline
-      </Badge>
-    )
-  }
-  return (
-    <Badge size='sm' className='border-warning/20 bg-warning/10 text-warning'>
-      Unknown
-    </Badge>
-  )
-}
-
-function ProtocolBadge({ useSSL }: { useSSL: boolean }) {
-  return (
-    <Badge
-      size='sm'
-      variant='secondary'
-      className='gap-1 font-normal text-muted-foreground'
-    >
-      {useSSL ? (
-        <>
-          <ShieldCheck className='text-success' /> HTTPS / SSL
-        </>
-      ) : (
-        <>
-          <ShieldAlert /> HTTP
-        </>
-      )}
-    </Badge>
-  )
-}
-
-// Baris detail: label kiri muted, nilai kanan (mono untuk data mesin)
-function DetailRow({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className='flex items-center justify-between gap-4 py-2'>
-      <span className='text-xs text-muted-foreground'>{label}</span>
-      <span className='text-end'>{children}</span>
-    </div>
-  )
-}
-
 export function KelolaRouter() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState<RouterRow[]>(DUMMY_ROUTERS)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -137,8 +72,6 @@ export function KelolaRouter() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const [routerDetail, setRouterDetail] = useState<RouterRow | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
   const [routerToDelete, setRouterToDelete] = useState<RouterRow | null>(null)
   const [routerToEdit, setRouterToEdit] = useState<RouterRow | null>(null)
   const [editName, setEditName] = useState('')
@@ -176,9 +109,8 @@ export function KelolaRouter() {
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1
   const rangeEnd = Math.min(safePage * pageSize, filtered.length)
 
-  const openDetail = (router: RouterRow) => {
-    setShowPassword(false)
-    setRouterDetail(router)
+  const goDetail = (router: RouterRow) => {
+    navigate({ to: '/routers/$id', params: { id: router.id } })
   }
 
   const openEdit = (router: RouterRow) => {
@@ -300,7 +232,11 @@ export function KelolaRouter() {
                       </TableRow>
                     ) : (
                       pageRows.map((router) => (
-                        <TableRow key={router.id}>
+                        <TableRow
+                          key={router.id}
+                          className='cursor-pointer'
+                          onClick={() => goDetail(router)}
+                        >
                           <TableCell className='ps-4'>
                             <div className='flex flex-col whitespace-nowrap'>
                               <span className='text-sm text-foreground'>
@@ -323,7 +259,10 @@ export function KelolaRouter() {
                           <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                             {router.lastCheckedAt ?? '—'}
                           </TableCell>
-                          <TableCell className='pe-4 text-right'>
+                          <TableCell
+                            className='pe-4 text-right'
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -337,7 +276,7 @@ export function KelolaRouter() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align='end'>
                                 <DropdownMenuItem
-                                  onClick={() => openDetail(router)}
+                                  onClick={() => goDetail(router)}
                                 >
                                   Lihat Detail
                                 </DropdownMenuItem>
@@ -423,99 +362,6 @@ export function KelolaRouter() {
           </Card>
         </div>
       </Main>
-
-      {/* Dialog detail */}
-      <Dialog
-        open={!!routerDetail}
-        onOpenChange={(open) => !open && setRouterDetail(null)}
-      >
-        <DialogContent className='sm:max-w-[440px]'>
-          <DialogHeader>
-            <DialogTitle>Detail Router</DialogTitle>
-            <DialogDescription>
-              Informasi lengkap {routerDetail?.name} milik{' '}
-              {routerDetail?.ownerName}.
-            </DialogDescription>
-          </DialogHeader>
-          {routerDetail && (
-            <div className='no-scrollbar -mx-6 max-h-[70vh] overflow-y-auto px-6'>
-            <div className='flex flex-col divide-y divide-border/40'>
-              <DetailRow label='Router'>
-                <span className='text-sm text-foreground'>
-                  {routerDetail.name}
-                </span>
-              </DetailRow>
-              <DetailRow label='Owner'>
-                <span className='text-sm text-foreground'>
-                  {routerDetail.ownerName}
-                </span>
-              </DetailRow>
-              <DetailRow label='Status'>
-                <StatusBadge status={routerDetail.lastStatus} />
-              </DetailRow>
-              <DetailRow label='Protokol'>
-                <ProtocolBadge useSSL={routerDetail.useSSL} />
-              </DetailRow>
-              <DetailRow label='Terakhir Dicek'>
-                <span className='font-mono text-xs text-muted-foreground tabular-nums'>
-                  {routerDetail.lastCheckedAt ?? '—'}
-                </span>
-              </DetailRow>
-              <DetailRow label='Host'>
-                <span className='font-mono text-xs'>{routerDetail.host}</span>
-              </DetailRow>
-              <DetailRow label='Port'>
-                <span className='font-mono text-xs tabular-nums'>
-                  {routerDetail.port}
-                </span>
-              </DetailRow>
-              <DetailRow label='Username'>
-                <span className='font-mono text-xs'>
-                  {routerDetail.username}
-                </span>
-              </DetailRow>
-              <DetailRow label='Password'>
-                <span className='inline-flex items-center gap-2'>
-                  <span className='font-mono text-xs select-all'>
-                    {showPassword ? routerDetail.password : '••••••••'}
-                  </span>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='size-6 text-muted-foreground hover:text-foreground'
-                    onClick={() => setShowPassword((s) => !s)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className='h-3.5 w-3.5' />
-                    ) : (
-                      <Eye className='h-3.5 w-3.5' />
-                    )}
-                    <span className='sr-only'>
-                      {showPassword ? 'Sembunyikan' : 'Tampilkan'} password
-                    </span>
-                  </Button>
-                </span>
-              </DetailRow>
-              <DetailRow label='Hotspot Name'>
-                <span className='font-mono text-xs'>
-                  {routerDetail.hotspotName ?? '—'}
-                </span>
-              </DetailRow>
-              <DetailRow label='DNS Login'>
-                <span className='font-mono text-xs'>
-                  {routerDetail.dnsName ?? '—'}
-                </span>
-              </DetailRow>
-            </div>
-            </div>
-          )}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant='outline'>Tutup</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog edit (dummy) */}
       <Dialog

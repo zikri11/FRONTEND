@@ -390,7 +390,8 @@ export function Dashboard() {
                       </Card>
                     )}
                     {isOwner ? (
-                      <Card className={nestedCardClass}>
+                      <Link to='/pos-transactions' className='block transition-transform active:scale-[0.98]'>
+                      <Card className={`${nestedCardClass} h-full hover:bg-muted/30 transition-colors`}>
                         <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                           <CardTitle className='text-sm font-medium'>
                             Total Transaksi POS
@@ -435,6 +436,7 @@ export function Dashboard() {
                           </div>
                         </CardContent>
                       </Card>
+                      </Link>
                     ) : (
                       <Link to='/active-users' className='block transition-transform active:scale-[0.98]'>
                         <Card className={`${nestedCardClass} h-full hover:bg-muted/30 transition-colors`}>

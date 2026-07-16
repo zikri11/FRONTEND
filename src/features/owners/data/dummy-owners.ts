@@ -10,6 +10,7 @@ export type OwnerRow = {
   technicians: number
   routers: number
   posTransactions: number
+  createdAt: string // "d MMM yyyy", dummy
 }
 
 export const PLAN_TIERS: PlanTier[] = ['Free', 'Standard', 'Pro']
@@ -44,6 +45,28 @@ function planFor(i: number): PlanTier {
   return 'Free'
 }
 
+const MONTHS_ID = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mei',
+  'Jun',
+  'Jul',
+  'Agu',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Des',
+]
+
+function createdAtFor(i: number): string {
+  // Deterministik: menyebar Jan–Jun 2026
+  const month = i % 6
+  const day = 1 + ((i * 7) % 27)
+  return `${day} ${MONTHS_ID[month]} 2026`
+}
+
 const TOTAL = 30
 
 function generate(): OwnerRow[] {
@@ -58,6 +81,7 @@ function generate(): OwnerRow[] {
       technicians: i % 11,
       routers: 1 + ((i * 3) % 25),
       posTransactions: (i * 97) % 2000,
+      createdAt: createdAtFor(i),
     })
   }
   return list

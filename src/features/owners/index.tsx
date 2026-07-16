@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import {
   ChevronLeft,
   ChevronRight,
@@ -90,6 +91,7 @@ function PlanBadge({ plan }: { plan: PlanTier }) {
 }
 
 export function KelolaOwner() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState<OwnerRow[]>(DUMMY_OWNERS)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -256,7 +258,16 @@ export function KelolaOwner() {
                       </TableRow>
                     ) : (
                       pageRows.map((owner) => (
-                        <TableRow key={owner.id}>
+                        <TableRow
+                          key={owner.id}
+                          className='cursor-pointer'
+                          onClick={() =>
+                            navigate({
+                              to: '/users/$id',
+                              params: { id: owner.id },
+                            })
+                          }
+                        >
                           <TableCell className='ps-4 text-sm text-foreground whitespace-nowrap'>
                             {owner.name}
                           </TableCell>
@@ -275,7 +286,10 @@ export function KelolaOwner() {
                           <TableCell className='text-right text-sm tabular-nums'>
                             {owner.posTransactions.toLocaleString('id-ID')}
                           </TableCell>
-                          <TableCell className='pe-4 text-right'>
+                          <TableCell
+                            className='pe-4 text-right'
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -288,6 +302,16 @@ export function KelolaOwner() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align='end'>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    navigate({
+                                      to: '/users/$id',
+                                      params: { id: owner.id },
+                                    })
+                                  }
+                                >
+                                  Lihat Detail
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openEdit(owner)}>
                                   Edit
                                 </DropdownMenuItem>

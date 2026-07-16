@@ -214,9 +214,9 @@ export function OutletStatusOverview() {
           </div>
           <Link
             to='/monitoring'
-            className='text-sm text-muted-foreground transition-colors hover:text-foreground'
+            className='text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground'
           >
-            Lihat detail →
+            Lihat detail
           </Link>
         </CardHeader>
         <CardContent>

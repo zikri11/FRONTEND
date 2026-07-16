@@ -68,10 +68,21 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { DetailRow, ProtocolBadge, StatusBadge } from './components'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   buildPosKeys,
   buildProfiles,
   buildVouchers,
+  type HotspotProfileRow,
+  type PosKeyRow,
   type VoucherRow,
 } from './data/dummy-router-detail'
 import { DUMMY_ROUTERS } from './data/dummy-routers'
@@ -85,14 +96,22 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const routerIndex = DUMMY_ROUTERS.findIndex((r) => r.id === routerId)
   const router = routerIndex >= 0 ? DUMMY_ROUTERS[routerIndex] : null
 
-  const profiles = useMemo(
-    () => (router ? buildProfiles(routerIndex) : []),
-    [router, routerIndex]
+  const [profiles, setProfiles] = useState<HotspotProfileRow[]>(() =>
+    router ? buildProfiles(routerIndex) : []
   )
-  const posKeys = useMemo(
-    () => (router ? buildPosKeys(routerIndex) : []),
-    [router, routerIndex]
+  const [posKeys, setPosKeys] = useState<PosKeyRow[]>(() =>
+    router ? buildPosKeys(routerIndex) : []
   )
+
+  const [profileToEdit, setProfileToEdit] = useState<HotspotProfileRow | null>(
+    null
+  )
+  const [editProfileName, setEditProfileName] = useState('')
+  const [editRateLimit, setEditRateLimit] = useState('')
+  const [editValidity, setEditValidity] = useState('')
+  const [profileToDelete, setProfileToDelete] =
+    useState<HotspotProfileRow | null>(null)
+  const [keyToDelete, setKeyToDelete] = useState<PosKeyRow | null>(null)
   const [vouchers, setVouchers] = useState<VoucherRow[]>(() =>
     router ? buildVouchers(routerIndex, buildProfiles(routerIndex), router.name) : []
   )
@@ -178,6 +197,56 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     setVouchers((prev) => prev.filter((v) => v.id !== voucherToDelete.id))
     setVoucherToDelete(null)
     toast.success('Voucher berhasil dihapus (dummy)')
+  }
+
+  const openProfileEdit = (profile: HotspotProfileRow) => {
+    setProfileToEdit(profile)
+    setEditProfileName(profile.name)
+    setEditRateLimit(profile.rateLimit)
+    setEditValidity(profile.validity)
+  }
+
+  const handleProfileEditSave = () => {
+    if (!profileToEdit) return
+    setProfiles((prev) =>
+      prev.map((p) =>
+        p.id === profileToEdit.id
+          ? {
+              ...p,
+              name: editProfileName,
+              rateLimit: editRateLimit,
+              validity: editValidity,
+            }
+          : p
+      )
+    )
+    setProfileToEdit(null)
+    toast.success('Profil berhasil diperbarui (dummy)')
+  }
+
+  const handleProfileDelete = () => {
+    if (!profileToDelete) return
+    setProfiles((prev) => prev.filter((p) => p.id !== profileToDelete.id))
+    setProfileToDelete(null)
+    toast.success('Profil berhasil dihapus (dummy)')
+  }
+
+  const toggleKeyActive = (key: PosKeyRow) => {
+    setPosKeys((prev) =>
+      prev.map((k) => (k.id === key.id ? { ...k, isActive: !k.isActive } : k))
+    )
+    toast.success(
+      key.isActive
+        ? 'API key dinonaktifkan (dummy)'
+        : 'API key diaktifkan (dummy)'
+    )
+  }
+
+  const handleKeyDelete = () => {
+    if (!keyToDelete) return
+    setPosKeys((prev) => prev.filter((k) => k.id !== keyToDelete.id))
+    setKeyToDelete(null)
+    toast.success('API key berhasil dihapus (dummy)')
   }
 
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
@@ -328,8 +397,11 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                           <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                             Status
                           </TableHead>
-                          <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                          <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                             Terakhir Digunakan
+                          </TableHead>
+                          <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                            Aksi
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -337,7 +409,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                         {posKeys.length === 0 ? (
                           <TableRow className='hover:bg-transparent'>
                             <TableCell
-                              colSpan={3}
+                              colSpan={4}
                               className='h-24 text-center text-sm text-muted-foreground'
                             >
                               Belum ada API key untuk router ini.
@@ -374,8 +446,40 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className='pe-4 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
+                              <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                                 {key.lastUsedAt ?? '—'}
+                              </TableCell>
+                              <TableCell className='pe-4 text-right'>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant='ghost'
+                                      size='icon'
+                                      className='size-8'
+                                    >
+                                      <MoreHorizontalIcon />
+                                      <span className='sr-only'>
+                                        Buka menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align='end'>
+                                    <DropdownMenuItem
+                                      onClick={() => toggleKeyActive(key)}
+                                    >
+                                      {key.isActive
+                                        ? 'Nonaktifkan'
+                                        : 'Aktifkan'}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      variant='destructive'
+                                      onClick={() => setKeyToDelete(key)}
+                                    >
+                                      Hapus
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </TableCell>
                             </TableRow>
                           ))
@@ -465,8 +569,11 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                           <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                             Shared
                           </TableHead>
-                          <TableHead className='pe-4 text-xs font-medium tracking-wide text-muted-foreground'>
+                          <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                             Masa Aktif
+                          </TableHead>
+                          <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                            Aksi
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -499,8 +606,36 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                             <TableCell className='text-right text-sm tabular-nums'>
                               {profile.sharedUsers}
                             </TableCell>
-                            <TableCell className='pe-4 font-mono text-xs whitespace-nowrap'>
+                            <TableCell className='font-mono text-xs whitespace-nowrap'>
                               {profile.validity}
+                            </TableCell>
+                            <TableCell className='pe-4 text-right'>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    className='size-8'
+                                  >
+                                    <MoreHorizontalIcon />
+                                    <span className='sr-only'>Buka menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align='end'>
+                                  <DropdownMenuItem
+                                    onClick={() => openProfileEdit(profile)}
+                                  >
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant='destructive'
+                                    onClick={() => setProfileToDelete(profile)}
+                                  >
+                                    Hapus
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -848,6 +983,110 @@ export function RouterDetail({ routerId }: { routerId: string }) {
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
               Hapus Massal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog edit profil (dummy) */}
+      <Dialog
+        open={!!profileToEdit}
+        onOpenChange={(open) => !open && setProfileToEdit(null)}
+      >
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Edit Profil</DialogTitle>
+            <DialogDescription>
+              Ubah profil hotspot. Perubahan hanya dummy (belum tersambung
+              backend).
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-2'>
+            <div className='grid gap-2'>
+              <Label htmlFor='profile-name'>Nama Profil</Label>
+              <Input
+                id='profile-name'
+                value={editProfileName}
+                onChange={(e) => setEditProfileName(e.target.value)}
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='profile-rate'>Bandwidth (rate limit)</Label>
+              <Input
+                id='profile-rate'
+                className='font-mono'
+                value={editRateLimit}
+                onChange={(e) => setEditRateLimit(e.target.value)}
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='profile-validity'>Masa Aktif</Label>
+              <Input
+                id='profile-validity'
+                className='w-[140px] font-mono'
+                value={editValidity}
+                onChange={(e) => setEditValidity(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setProfileToEdit(null)}>
+              Batal
+            </Button>
+            <Button onClick={handleProfileEditSave}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Konfirmasi hapus profil */}
+      <AlertDialog
+        open={!!profileToDelete}
+        onOpenChange={(open) => !open && setProfileToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Profil <strong>{profileToDelete?.name}</strong> akan dihapus dari
+              router ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setProfileToDelete(null)}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleProfileDelete}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              Hapus Profil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Konfirmasi hapus API key */}
+      <AlertDialog
+        open={!!keyToDelete}
+        onOpenChange={(open) => !open && setKeyToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              API key <strong>{keyToDelete?.label}</strong> akan dicabut —
+              mesin kasir yang memakainya tidak bisa membuat voucher lagi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setKeyToDelete(null)}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleKeyDelete}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              Hapus API Key
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

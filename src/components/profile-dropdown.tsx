@@ -53,7 +53,7 @@ export function ProfileDropdown() {
             {user?.role === 'OWNER' && (
               <DropdownMenuItem asChild>
                 <Link to='/billing'>
-                  Billing
+                  Langganan
                   <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
                 </Link>
               </DropdownMenuItem>

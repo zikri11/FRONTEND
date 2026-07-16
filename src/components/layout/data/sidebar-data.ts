@@ -56,7 +56,7 @@ export const sidebarData: SidebarData = {
           icon: ReceiptText,
         },
         {
-          title: 'Billing',
+          title: 'Langganan',
           url: '/billing',
           icon: CreditCard,
         },

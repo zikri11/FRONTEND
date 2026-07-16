@@ -97,7 +97,7 @@ export function BillingPage() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div className={`${outerBoxClass} flex-1`}>
           <div>
-            <h2 className='text-2xl font-semibold tracking-tight'>Billing</h2>
+            <h2 className='text-2xl font-semibold tracking-tight'>Langganan</h2>
             <p className='mt-1 text-sm text-muted-foreground'>
               Kelola paket langganan dan lihat riwayat tagihan.
             </p>

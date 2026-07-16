@@ -40,7 +40,7 @@ export function AppSidebar() {
             }
             if (
               user?.role !== 'OWNER' &&
-              (item.title === 'Transaksi POS' || item.title === 'Billing')
+              (item.title === 'Transaksi POS' || item.title === 'Langganan')
             ) {
               return false
             }

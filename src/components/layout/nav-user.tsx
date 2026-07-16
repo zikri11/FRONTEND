@@ -90,7 +90,7 @@ export function NavUser({ user }: NavUserProps) {
                   <DropdownMenuItem asChild>
                     <Link to='/billing'>
                       <CreditCard />
-                      Billing
+                      Langganan
                     </Link>
                   </DropdownMenuItem>
                 )}

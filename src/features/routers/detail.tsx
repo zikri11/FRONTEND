@@ -266,9 +266,32 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1
   const rangeEnd = Math.min(safePage * pageSize, filtered.length)
 
-  const totalVouchers = vouchers.length
-  const unusedVouchers = vouchers.filter((v) => v.status === 'UNUSED').length
-  const usedVouchers = totalVouchers - unusedVouchers
+  // Statistik voucher — count nyata dari GET /vouchers?serverId=&status= (bug
+  // filter serverId sudah diperbaiki backend; scope SA global). take=1, ambil
+  // meta.total. Tabel voucher di bawah masih dummy (menyusul).
+  const fetchVoucherTotal = (
+    signal: AbortSignal,
+    status?: 'UNUSED' | 'USED'
+  ) =>
+    api
+      .get('/vouchers', { params: { serverId: routerId, take: 1, status }, signal })
+      .then((r) => (r.data?.meta?.total as number) ?? 0)
+
+  const { data: totalVouchers = 0 } = useQuery({
+    queryKey: ['router-voucher-count', routerId, 'all'],
+    queryFn: ({ signal }) => fetchVoucherTotal(signal),
+    enabled: !!router,
+  })
+  const { data: unusedVouchers = 0 } = useQuery({
+    queryKey: ['router-voucher-count', routerId, 'UNUSED'],
+    queryFn: ({ signal }) => fetchVoucherTotal(signal, 'UNUSED'),
+    enabled: !!router,
+  })
+  const { data: usedVouchers = 0 } = useQuery({
+    queryKey: ['router-voucher-count', routerId, 'USED'],
+    queryFn: ({ signal }) => fetchVoucherTotal(signal, 'USED'),
+    enabled: !!router,
+  })
 
   const allPageSelected =
     pageRows.length > 0 && pageRows.every((v) => selectedRows.has(v.id))

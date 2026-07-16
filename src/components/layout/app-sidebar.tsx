@@ -44,7 +44,9 @@ export function AppSidebar() {
             }
             if (
               user?.role !== 'SUPER_ADMIN' &&
-              (item.title === 'Kelola Owner' || item.title === 'Kelola Plan')
+              ['Kelola Owner', 'Kelola Plan', 'Kelola Router'].includes(
+                item.title
+              )
             ) {
               return false
             }

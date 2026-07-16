@@ -62,6 +62,11 @@ export const sidebarData: SidebarData = {
           icon: Layers,
         },
         {
+          title: 'Kelola Router',
+          url: '/routers',
+          icon: Router,
+        },
+        {
           title: 'Transaksi POS',
           url: '/pos-transactions',
           icon: ReceiptText,

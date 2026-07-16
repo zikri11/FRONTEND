@@ -161,10 +161,7 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                   {owner.name}
                 </h2>
                 <p className='mt-1 text-sm text-muted-foreground'>
-                  {owner.email}
-                </p>
-                <p className='mt-1 text-xs text-muted-foreground'>
-                  Akun dibuat {owner.createdAt}
+                  {owner.email} - Akun dibuat {owner.createdAt}
                 </p>
               </div>
 

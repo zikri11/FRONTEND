@@ -105,44 +105,40 @@ export function PosTransactionsHistory() {
               />
             </div>
             <div className='flex w-full gap-2 sm:w-auto'>
-              <div className='w-full sm:w-[180px]'>
-                <Select
-                  value={outletFilter}
-                  onValueChange={(v) => {
-                    setOutletFilter(v)
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Filter Outlet' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>Semua Outlet</SelectItem>
-                    {POS_OUTLETS.map((o) => (
-                      <SelectItem key={o} value={o}>
-                        {o}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='w-full sm:w-[140px]'>
-                <Select
-                  value={sortOrder}
-                  onValueChange={(v) => {
-                    setSortOrder(v as 'newest' | 'oldest')
-                    setCurrentPage(1)
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Urutkan' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='newest'>Terbaru</SelectItem>
-                    <SelectItem value='oldest'>Terlama</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={outletFilter}
+                onValueChange={(v) => {
+                  setOutletFilter(v)
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className='w-full sm:w-[180px]'>
+                  <SelectValue placeholder='Filter Outlet' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>Semua Outlet</SelectItem>
+                  {POS_OUTLETS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={sortOrder}
+                onValueChange={(v) => {
+                  setSortOrder(v as 'newest' | 'oldest')
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className='w-full sm:w-[140px]'>
+                  <SelectValue placeholder='Urutkan' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='newest'>Terbaru</SelectItem>
+                  <SelectItem value='oldest'>Terlama</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

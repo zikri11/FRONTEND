@@ -7,7 +7,6 @@ import {
   Eye,
   EyeOff,
   MoreHorizontalIcon,
-  RefreshCw,
   SearchIcon,
   Trash2Icon,
 } from 'lucide-react'
@@ -430,15 +429,6 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                     </CardDescription>
                   </div>
                   <div className='flex items-center gap-2'>
-                    <Button
-                      variant='outline'
-                      onClick={() =>
-                        toast.info('Sinkronisasi dimulai (dummy)')
-                      }
-                    >
-                      <RefreshCw className='mr-2 h-4 w-4' />
-                      Sinkron
-                    </Button>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button>Buat Voucher</Button>

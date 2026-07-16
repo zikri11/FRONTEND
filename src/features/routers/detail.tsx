@@ -269,27 +269,34 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   // Statistik voucher — count nyata dari GET /vouchers?serverId=&status= (bug
   // filter serverId sudah diperbaiki backend; scope SA global). take=1, ambil
   // meta.total. Tabel voucher di bawah masih dummy (menyusul).
-  const fetchVoucherTotal = (
-    signal: AbortSignal,
-    status?: 'UNUSED' | 'USED'
-  ) =>
-    api
-      .get('/vouchers', { params: { serverId: routerId, take: 1, status }, signal })
-      .then((r) => (r.data?.meta?.total as number) ?? 0)
-
   const { data: totalVouchers = 0 } = useQuery({
     queryKey: ['router-voucher-count', routerId, 'all'],
-    queryFn: ({ signal }) => fetchVoucherTotal(signal),
+    queryFn: ({ signal }) =>
+      api
+        .get('/vouchers', { params: { serverId: routerId, take: 1 }, signal })
+        .then((r) => (r.data?.meta?.total as number) ?? 0),
     enabled: !!router,
   })
   const { data: unusedVouchers = 0 } = useQuery({
     queryKey: ['router-voucher-count', routerId, 'UNUSED'],
-    queryFn: ({ signal }) => fetchVoucherTotal(signal, 'UNUSED'),
+    queryFn: ({ signal }) =>
+      api
+        .get('/vouchers', {
+          params: { serverId: routerId, take: 1, status: 'UNUSED' },
+          signal,
+        })
+        .then((r) => (r.data?.meta?.total as number) ?? 0),
     enabled: !!router,
   })
   const { data: usedVouchers = 0 } = useQuery({
     queryKey: ['router-voucher-count', routerId, 'USED'],
-    queryFn: ({ signal }) => fetchVoucherTotal(signal, 'USED'),
+    queryFn: ({ signal }) =>
+      api
+        .get('/vouchers', {
+          params: { serverId: routerId, take: 1, status: 'USED' },
+          signal,
+        })
+        .then((r) => (r.data?.meta?.total as number) ?? 0),
     enabled: !!router,
   })
 

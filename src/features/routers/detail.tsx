@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { AxiosError } from 'axios'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ChevronLeft,
@@ -9,6 +11,7 @@ import {
   Trash2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { api } from '@/lib/axios'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { useServerStore } from '@/stores/server-store'
 import { Badge } from '@/components/reui/badge'
@@ -76,11 +79,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  buildPosKeys,
   buildProfiles,
   buildVouchers,
   type HotspotProfileRow,
-  type PosKeyRow,
   type VoucherRow,
 } from './data/dummy-router-detail'
 import {
@@ -92,8 +93,26 @@ import {
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
+// POS API key dari backend (GET /pos-keys) — di-mask oleh server
+type PosKey = {
+  id: string
+  label: string
+  serverId: string
+  maskedKey: string
+  isActive: boolean
+  lastUsedAt?: string | null
+}
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  const m =
+    error instanceof AxiosError ? error.response?.data?.message : undefined
+  if (Array.isArray(m)) return m.join(', ')
+  return typeof m === 'string' ? m : fallback
+}
+
 export function RouterDetail({ routerId }: { routerId: string }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const setActiveServerId = useServerStore((s) => s.setActiveServerId)
   const { servers, isLoading, fetchServers } = useServerStore()
   const ownersMap = useOwnersMap()
@@ -107,20 +126,53 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const seed = router ? seedFromId(router.id) : 0
 
   const [profiles, setProfiles] = useState<HotspotProfileRow[]>([])
-  const [posKeys, setPosKeys] = useState<PosKeyRow[]>([])
   const [vouchers, setVouchers] = useState<VoucherRow[]>([])
   const [dataForRouterId, setDataForRouterId] = useState<string | null>(null)
 
-  // Profil/voucher/POS key masih dummy seeded per router (bug backend:
-  // ?serverId= diabaikan) — regenerate saat router termuat/berganti.
+  // Profil & voucher masih dummy seeded per router (bug backend: ?serverId=
+  // diabaikan) — regenerate saat router termuat/berganti.
   // Pola "adjust state during render" (react.dev) — bukan di effect.
   if (router && dataForRouterId !== router.id) {
     setDataForRouterId(router.id)
     const generated = buildProfiles(seed)
     setProfiles(generated)
-    setPosKeys(buildPosKeys(seed))
     setVouchers(buildVouchers(seed, generated, router.name))
   }
+
+  // Integrasi POS — data nyata GET /pos-keys (backend belum scope per server,
+  // filter client-side by serverId, seperti halaman /developer/keys).
+  const { data: allPosKeys = [] } = useQuery<PosKey[]>({
+    queryKey: ['pos-keys'],
+    queryFn: ({ signal }) =>
+      api.get('/pos-keys', { signal }).then((r) => r.data),
+    enabled: !!router,
+  })
+  const posKeys = useMemo(
+    () => allPosKeys.filter((k) => k.serverId === routerId),
+    [allPosKeys, routerId]
+  )
+  const invalidatePosKeys = () =>
+    queryClient.invalidateQueries({ queryKey: ['pos-keys'] })
+
+  const toggleKeyMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api.patch(`/pos-keys/${id}`, { isActive }),
+    onSuccess: () => {
+      toast.success('Status API key diperbarui')
+      invalidatePosKeys()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal mengubah status key')),
+  })
+
+  const deleteKeyMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/pos-keys/${id}`),
+    onSuccess: () => {
+      toast.success('API key berhasil dihapus')
+      invalidatePosKeys()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal menghapus key')),
+    onSettled: () => setKeyToDelete(null),
+  })
 
   const [profileToEdit, setProfileToEdit] = useState<HotspotProfileRow | null>(
     null
@@ -130,7 +182,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const [editValidity, setEditValidity] = useState('')
   const [profileToDelete, setProfileToDelete] =
     useState<HotspotProfileRow | null>(null)
-  const [keyToDelete, setKeyToDelete] = useState<PosKeyRow | null>(null)
+  const [keyToDelete, setKeyToDelete] = useState<PosKey | null>(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [profileFilter, setProfileFilter] = useState('all')
@@ -245,22 +297,13 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     toast.success('Profil berhasil dihapus (dummy)')
   }
 
-  const toggleKeyActive = (key: PosKeyRow) => {
-    setPosKeys((prev) =>
-      prev.map((k) => (k.id === key.id ? { ...k, isActive: !k.isActive } : k))
-    )
-    toast.success(
-      key.isActive
-        ? 'API key dinonaktifkan (dummy)'
-        : 'API key diaktifkan (dummy)'
-    )
+  const toggleKeyActive = (key: PosKey) => {
+    toggleKeyMutation.mutate({ id: key.id, isActive: !key.isActive })
   }
 
   const handleKeyDelete = () => {
     if (!keyToDelete) return
-    setPosKeys((prev) => prev.filter((k) => k.id !== keyToDelete.id))
-    setKeyToDelete(null)
-    toast.success('API key berhasil dihapus (dummy)')
+    deleteKeyMutation.mutate(keyToDelete.id)
   }
 
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
@@ -449,7 +492,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                                 )}
                               </TableCell>
                               <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
-                                {key.lastUsedAt ?? '—'}
+                                {formatCheckedAt(key.lastUsedAt) ?? '—'}
                               </TableCell>
                               <TableCell className='pe-4 text-right'>
                                 <DropdownMenu>

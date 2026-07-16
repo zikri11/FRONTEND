@@ -19,36 +19,6 @@ export type VoucherRow = {
   createdAt: string // "d MMM yyyy"
 }
 
-export type PosKeyRow = {
-  id: string
-  label: string
-  maskedKey: string
-  isActive: boolean
-  lastUsedAt: string | null // "d MMM yyyy, HH:mm"
-}
-
-// API key POS per router (per-outlet, terikat 1 server) — dummy
-export function buildPosKeys(seed: number): PosKeyRow[] {
-  const count = 1 + (seed % 3)
-  return Array.from({ length: count }, (_, n) => {
-    const hex = ((seed * 2654435761 + n * 40503) >>> 0)
-      .toString(16)
-      .padStart(8, '0')
-      .slice(0, 8)
-    const active = (seed + n) % 4 !== 1
-    return {
-      id: `poskey-${seed}-${n + 1}`,
-      label: `Kasir ${n + 1}`,
-      maskedKey: `pos_${hex}••••••••`,
-      isActive: active,
-      lastUsedAt:
-        (seed + n) % 5 === 0
-          ? null
-          : `${13 + ((seed + n) % 2)} Jul 2026, ${String(9 + ((seed + n) % 10)).padStart(2, '0')}:${String((seed * 7 + n * 13) % 60).padStart(2, '0')}`,
-    }
-  })
-}
-
 const PROFILE_PRESETS = [
   { name: '1 Jam', rateLimit: '2M/2M', validity: '1h' },
   { name: '3 Jam', rateLimit: '3M/3M', validity: '3h' },

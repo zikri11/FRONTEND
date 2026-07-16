@@ -5,9 +5,9 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
-  Sparkles,
 } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
+import { useAuthStore } from '@/stores/auth-store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -25,8 +25,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { SignOutDialog } from '@/components/sign-out-dialog'
-import { BillingUpgradeDialog } from '@/components/billing-upgrade-dialog'
-import { useState } from 'react'
 
 type NavUserProps = {
   user: {
@@ -39,7 +37,7 @@ type NavUserProps = {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
-  const [billingOpen, setBillingOpen] = useState(false)
+  const role = useAuthStore((s) => s.auth.user?.role)
 
   return (
     <>
@@ -82,25 +80,20 @@ export function NavUser({ user }: NavUserProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setBillingOpen(true)}>
-                  <Sparkles />
-                  Upgrade to Pro
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
                   <Link to='/settings/account'>
                     <BadgeCheck />
                     Account
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to='/settings'>
-                    <CreditCard />
-                    Billing
-                  </Link>
-                </DropdownMenuItem>
+                {role === 'OWNER' && (
+                  <DropdownMenuItem asChild>
+                    <Link to='/billing'>
+                      <CreditCard />
+                      Billing
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link to='/settings/notifications'>
                     <Bell />
@@ -122,7 +115,6 @@ export function NavUser({ user }: NavUserProps) {
       </SidebarMenu>
 
       <SignOutDialog open={!!open} onOpenChange={setOpen} />
-      <BillingUpgradeDialog open={billingOpen} onOpenChange={setBillingOpen} />
     </>
   )
 }

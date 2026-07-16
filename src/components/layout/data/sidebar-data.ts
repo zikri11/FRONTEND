@@ -14,6 +14,7 @@ import {
   BookOpen,
   Users,
   ReceiptText,
+  CreditCard,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -53,6 +54,11 @@ export const sidebarData: SidebarData = {
           title: 'Transaksi POS',
           url: '/pos-transactions',
           icon: ReceiptText,
+        },
+        {
+          title: 'Billing',
+          url: '/billing',
+          icon: CreditCard,
         },
         {
           title: 'Kelola Teknisi',

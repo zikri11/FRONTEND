@@ -125,7 +125,19 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
         <ProfileDropdown />
       </Header>
 
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+      <Main className='flex flex-1 flex-col gap-3 sm:gap-4'>
+        <div>
+          <Button
+            variant='ghost'
+            size='icon'
+            className='size-8 -ms-2 text-muted-foreground hover:text-foreground'
+            asChild
+          >
+            <Link to='/users' aria-label='Kembali ke Kelola Owner'>
+              <ArrowLeft className='h-4 w-4' />
+            </Link>
+          </Button>
+        </div>
         <div className={`${outerBoxClass} flex-1`}>
           {!owner ? (
             <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
@@ -145,17 +157,7 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
           ) : (
             <>
               <div>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='size-8 -ms-2 text-muted-foreground hover:text-foreground'
-                  asChild
-                >
-                  <Link to='/users' aria-label='Kembali ke Kelola Owner'>
-                    <ArrowLeft className='h-4 w-4' />
-                  </Link>
-                </Button>
-                <h2 className='mt-2 text-2xl font-semibold tracking-tight'>
+                <h2 className='text-2xl font-semibold tracking-tight'>
                   {owner.name}
                 </h2>
                 <p className='mt-1 text-sm text-muted-foreground'>

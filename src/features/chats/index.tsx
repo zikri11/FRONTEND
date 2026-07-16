@@ -517,8 +517,7 @@ export function Chats() {
                       {AI_PROVIDERS.map((provider) => (
                         <SelectItem key={provider.value} value={provider.value}>
                           <span className="flex flex-col items-start gap-px">
-                            <span className="flex items-center gap-2 font-medium">
-                              <span className={`h-2 w-2 rounded-full ${provider.color}`} />
+                            <span className="text-sm font-medium">
                               {provider.label}
                             </span>
                             <small className="text-xs text-muted-foreground">

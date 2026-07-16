@@ -13,6 +13,10 @@ export type RouterRow = {
   ownerName: string
   lastStatus: RouterStatus
   lastCheckedAt: string | null // "d MMM yyyy, HH:mm"
+  username: string
+  password: string // dummy — aslinya terenkripsi AES-256-GCM di backend
+  hotspotName: string | null
+  dnsName: string | null
 }
 
 export const ROUTER_STATUSES: RouterStatus[] = ['ONLINE', 'OFFLINE', 'UNKNOWN']
@@ -48,6 +52,10 @@ function generate(): RouterRow[] {
       ownerName: owner.name,
       lastStatus: status,
       lastCheckedAt: checkedAtFor(i, status),
+      username: 'admin',
+      password: `rahasia-${String(i + 1).padStart(2, '0')}`,
+      hotspotName: i % 4 === 0 ? null : `hotspot${(i % 2) + 1}`,
+      dnsName: i % 3 === 0 ? null : `login.outlet${(i % 3) + 1}.wifi.com`,
     })
   }
   return list

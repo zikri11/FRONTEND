@@ -2,15 +2,46 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
+  MoreHorizontalIcon,
   SearchIcon,
   ShieldAlert,
   ShieldCheck,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { Badge } from '@/components/reui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -32,7 +63,11 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { DUMMY_ROUTERS, type RouterStatus } from './data/dummy-routers'
+import {
+  DUMMY_ROUTERS,
+  type RouterRow,
+  type RouterStatus,
+} from './data/dummy-routers'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
@@ -58,12 +93,57 @@ function StatusBadge({ status }: { status: RouterStatus }) {
   )
 }
 
+function ProtocolBadge({ useSSL }: { useSSL: boolean }) {
+  return (
+    <Badge
+      size='sm'
+      variant='secondary'
+      className='gap-1 font-normal text-muted-foreground'
+    >
+      {useSSL ? (
+        <>
+          <ShieldCheck className='text-success' /> HTTPS / SSL
+        </>
+      ) : (
+        <>
+          <ShieldAlert /> HTTP
+        </>
+      )}
+    </Badge>
+  )
+}
+
+// Baris detail: label kiri muted, nilai kanan (mono untuk data mesin)
+function DetailRow({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className='flex items-center justify-between gap-4 py-2'>
+      <span className='text-xs text-muted-foreground'>{label}</span>
+      <span className='text-end'>{children}</span>
+    </div>
+  )
+}
+
 export function KelolaRouter() {
+  const [rows, setRows] = useState<RouterRow[]>(DUMMY_ROUTERS)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  const [routerDetail, setRouterDetail] = useState<RouterRow | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [routerToDelete, setRouterToDelete] = useState<RouterRow | null>(null)
+  const [routerToEdit, setRouterToEdit] = useState<RouterRow | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editHost, setEditHost] = useState('')
+  const [editPort, setEditPort] = useState(8728)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -74,7 +154,7 @@ export function KelolaRouter() {
   }, [search])
 
   const filtered = useMemo(() => {
-    let list = DUMMY_ROUTERS
+    let list = rows
     if (statusFilter !== 'all') {
       list = list.filter((r) => r.lastStatus === statusFilter)
     }
@@ -88,13 +168,45 @@ export function KelolaRouter() {
       )
     }
     return list
-  }, [statusFilter, debouncedSearch])
+  }, [rows, statusFilter, debouncedSearch])
 
   const totalPages = Math.ceil(filtered.length / pageSize)
   const safePage = Math.min(currentPage, Math.max(1, totalPages))
   const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1
   const rangeEnd = Math.min(safePage * pageSize, filtered.length)
+
+  const openDetail = (router: RouterRow) => {
+    setShowPassword(false)
+    setRouterDetail(router)
+  }
+
+  const openEdit = (router: RouterRow) => {
+    setRouterToEdit(router)
+    setEditName(router.name)
+    setEditHost(router.host)
+    setEditPort(router.port)
+  }
+
+  const handleEditSave = () => {
+    if (!routerToEdit) return
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === routerToEdit.id
+          ? { ...r, name: editName, host: editHost, port: editPort }
+          : r
+      )
+    )
+    setRouterToEdit(null)
+    toast.success('Data router berhasil diperbarui (dummy)')
+  }
+
+  const handleDeleteConfirm = () => {
+    if (!routerToDelete) return
+    setRows((prev) => prev.filter((r) => r.id !== routerToDelete.id))
+    setRouterToDelete(null)
+    toast.success('Router berhasil dihapus (dummy)')
+  }
 
   return (
     <>
@@ -168,8 +280,11 @@ export function KelolaRouter() {
                       <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                         Protokol
                       </TableHead>
-                      <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                      <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                         Terakhir Dicek
+                      </TableHead>
+                      <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
+                        Aksi
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -177,7 +292,7 @@ export function KelolaRouter() {
                     {pageRows.length === 0 ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
-                          colSpan={5}
+                          colSpan={6}
                           className='h-24 text-center text-sm text-muted-foreground'
                         >
                           Tidak ada router yang cocok.
@@ -203,25 +318,43 @@ export function KelolaRouter() {
                             <StatusBadge status={router.lastStatus} />
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              size='sm'
-                              variant='secondary'
-                              className='gap-1 font-normal text-muted-foreground'
-                            >
-                              {router.useSSL ? (
-                                <>
-                                  <ShieldCheck className='text-success' /> HTTPS
-                                  / SSL
-                                </>
-                              ) : (
-                                <>
-                                  <ShieldAlert /> HTTP
-                                </>
-                              )}
-                            </Badge>
+                            <ProtocolBadge useSSL={router.useSSL} />
                           </TableCell>
-                          <TableCell className='pe-4 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
+                          <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
                             {router.lastCheckedAt ?? '—'}
+                          </TableCell>
+                          <TableCell className='pe-4 text-right'>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='size-8'
+                                >
+                                  <MoreHorizontalIcon />
+                                  <span className='sr-only'>Buka menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align='end'>
+                                <DropdownMenuItem
+                                  onClick={() => openDetail(router)}
+                                >
+                                  Lihat Detail
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => openEdit(router)}
+                                >
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  variant='destructive'
+                                  onClick={() => setRouterToDelete(router)}
+                                >
+                                  Hapus
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))
@@ -290,6 +423,179 @@ export function KelolaRouter() {
           </Card>
         </div>
       </Main>
+
+      {/* Dialog detail */}
+      <Dialog
+        open={!!routerDetail}
+        onOpenChange={(open) => !open && setRouterDetail(null)}
+      >
+        <DialogContent className='sm:max-w-[440px]'>
+          <DialogHeader>
+            <DialogTitle>Detail Router</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap {routerDetail?.name} milik{' '}
+              {routerDetail?.ownerName}.
+            </DialogDescription>
+          </DialogHeader>
+          {routerDetail && (
+            <div className='no-scrollbar -mx-6 max-h-[70vh] overflow-y-auto px-6'>
+            <div className='flex flex-col divide-y divide-border/40'>
+              <DetailRow label='Router'>
+                <span className='text-sm text-foreground'>
+                  {routerDetail.name}
+                </span>
+              </DetailRow>
+              <DetailRow label='Owner'>
+                <span className='text-sm text-foreground'>
+                  {routerDetail.ownerName}
+                </span>
+              </DetailRow>
+              <DetailRow label='Status'>
+                <StatusBadge status={routerDetail.lastStatus} />
+              </DetailRow>
+              <DetailRow label='Protokol'>
+                <ProtocolBadge useSSL={routerDetail.useSSL} />
+              </DetailRow>
+              <DetailRow label='Terakhir Dicek'>
+                <span className='font-mono text-xs text-muted-foreground tabular-nums'>
+                  {routerDetail.lastCheckedAt ?? '—'}
+                </span>
+              </DetailRow>
+              <DetailRow label='Host'>
+                <span className='font-mono text-xs'>{routerDetail.host}</span>
+              </DetailRow>
+              <DetailRow label='Port'>
+                <span className='font-mono text-xs tabular-nums'>
+                  {routerDetail.port}
+                </span>
+              </DetailRow>
+              <DetailRow label='Username'>
+                <span className='font-mono text-xs'>
+                  {routerDetail.username}
+                </span>
+              </DetailRow>
+              <DetailRow label='Password'>
+                <span className='inline-flex items-center gap-2'>
+                  <span className='font-mono text-xs select-all'>
+                    {showPassword ? routerDetail.password : '••••••••'}
+                  </span>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='size-6 text-muted-foreground hover:text-foreground'
+                    onClick={() => setShowPassword((s) => !s)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className='h-3.5 w-3.5' />
+                    ) : (
+                      <Eye className='h-3.5 w-3.5' />
+                    )}
+                    <span className='sr-only'>
+                      {showPassword ? 'Sembunyikan' : 'Tampilkan'} password
+                    </span>
+                  </Button>
+                </span>
+              </DetailRow>
+              <DetailRow label='Hotspot Name'>
+                <span className='font-mono text-xs'>
+                  {routerDetail.hotspotName ?? '—'}
+                </span>
+              </DetailRow>
+              <DetailRow label='DNS Login'>
+                <span className='font-mono text-xs'>
+                  {routerDetail.dnsName ?? '—'}
+                </span>
+              </DetailRow>
+            </div>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant='outline'>Tutup</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog edit (dummy) */}
+      <Dialog
+        open={!!routerToEdit}
+        onOpenChange={(open) => !open && setRouterToEdit(null)}
+      >
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Edit Router</DialogTitle>
+            <DialogDescription>
+              Ubah data router. Perubahan hanya dummy (belum tersambung
+              backend).
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-2'>
+            <div className='grid gap-2'>
+              <Label htmlFor='router-name'>Nama</Label>
+              <Input
+                id='router-name'
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='router-host'>Host</Label>
+              <Input
+                id='router-host'
+                className='font-mono'
+                value={editHost}
+                onChange={(e) => setEditHost(e.target.value)}
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='router-port'>Port</Label>
+              <Input
+                id='router-port'
+                type='number'
+                min={1}
+                className='w-[140px] tabular-nums'
+                value={editPort}
+                onChange={(e) => setEditPort(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setRouterToEdit(null)}>
+              Batal
+            </Button>
+            <Button onClick={handleEditSave}>Simpan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Konfirmasi hapus */}
+      <AlertDialog
+        open={!!routerToDelete}
+        onOpenChange={(open) => !open && setRouterToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Router <strong>{routerToDelete?.name}</strong> milik{' '}
+              <strong>{routerToDelete?.ownerName}</strong> akan dihapus dari
+              platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRouterToDelete(null)}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              Hapus Router
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

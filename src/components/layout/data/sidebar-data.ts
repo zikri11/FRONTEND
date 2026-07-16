@@ -15,6 +15,7 @@ import {
   Users,
   ReceiptText,
   CreditCard,
+  Layers,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -54,6 +55,11 @@ export const sidebarData: SidebarData = {
           title: 'Kelola Owner',
           url: '/users',
           icon: Users,
+        },
+        {
+          title: 'Kelola Plan',
+          url: '/plans',
+          icon: Layers,
         },
         {
           title: 'Transaksi POS',

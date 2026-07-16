@@ -38,7 +38,10 @@ export function AppSidebar() {
             if (user?.role === 'TEKNISI' && item.title === 'Kelola Teknisi') {
               return false
             }
-            if (user?.role !== 'SUPER_ADMIN' && item.title === 'Kelola Owner') {
+            if (
+              user?.role !== 'SUPER_ADMIN' &&
+              (item.title === 'Kelola Owner' || item.title === 'Kelola Plan')
+            ) {
               return false
             }
             if (

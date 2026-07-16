@@ -140,7 +140,7 @@ export function BillingPage() {
               <CardTitle>Pemakaian Periode Ini</CardTitle>
               <CardDescription>Kuota terpakai dari paket Standard.</CardDescription>
             </CardHeader>
-            <CardContent className='flex flex-col gap-6'>
+            <CardContent className='grid gap-6 sm:grid-cols-3'>
               {USAGE.map((item) => {
                 const pct = Math.round((item.used / item.limit) * 100)
                 return (

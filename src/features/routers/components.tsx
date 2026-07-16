@@ -1,6 +1,6 @@
 import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Badge } from '@/components/reui/badge'
-import { type RouterStatus } from './data/dummy-routers'
+import { type RouterStatus } from './utils'
 
 export function StatusBadge({ status }: { status: RouterStatus }) {
   if (status === 'ONLINE') {

@@ -4,8 +4,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Eye,
-  EyeOff,
   MoreHorizontalIcon,
   SearchIcon,
   Trash2Icon,
@@ -85,23 +83,44 @@ import {
   type PosKeyRow,
   type VoucherRow,
 } from './data/dummy-router-detail'
-import { DUMMY_ROUTERS } from './data/dummy-routers'
+import {
+  formatCheckedAt,
+  normalizeStatus,
+  seedFromId,
+  useOwnersMap,
+} from './utils'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
 export function RouterDetail({ routerId }: { routerId: string }) {
   const navigate = useNavigate()
   const setActiveServerId = useServerStore((s) => s.setActiveServerId)
+  const { servers, isLoading, fetchServers } = useServerStore()
+  const ownersMap = useOwnersMap()
 
-  const routerIndex = DUMMY_ROUTERS.findIndex((r) => r.id === routerId)
-  const router = routerIndex >= 0 ? DUMMY_ROUTERS[routerIndex] : null
+  useEffect(() => {
+    fetchServers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  const [profiles, setProfiles] = useState<HotspotProfileRow[]>(() =>
-    router ? buildProfiles(routerIndex) : []
-  )
-  const [posKeys, setPosKeys] = useState<PosKeyRow[]>(() =>
-    router ? buildPosKeys(routerIndex) : []
-  )
+  const router = servers.find((s) => s.id === routerId) ?? null
+  const seed = router ? seedFromId(router.id) : 0
+
+  const [profiles, setProfiles] = useState<HotspotProfileRow[]>([])
+  const [posKeys, setPosKeys] = useState<PosKeyRow[]>([])
+  const [vouchers, setVouchers] = useState<VoucherRow[]>([])
+  const [dataForRouterId, setDataForRouterId] = useState<string | null>(null)
+
+  // Profil/voucher/POS key masih dummy seeded per router (bug backend:
+  // ?serverId= diabaikan) — regenerate saat router termuat/berganti.
+  // Pola "adjust state during render" (react.dev) — bukan di effect.
+  if (router && dataForRouterId !== router.id) {
+    setDataForRouterId(router.id)
+    const generated = buildProfiles(seed)
+    setProfiles(generated)
+    setPosKeys(buildPosKeys(seed))
+    setVouchers(buildVouchers(seed, generated, router.name))
+  }
 
   const [profileToEdit, setProfileToEdit] = useState<HotspotProfileRow | null>(
     null
@@ -112,11 +131,6 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const [profileToDelete, setProfileToDelete] =
     useState<HotspotProfileRow | null>(null)
   const [keyToDelete, setKeyToDelete] = useState<PosKeyRow | null>(null)
-  const [vouchers, setVouchers] = useState<VoucherRow[]>(() =>
-    router ? buildVouchers(routerIndex, buildProfiles(routerIndex), router.name) : []
-  )
-
-  const [showPassword, setShowPassword] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [profileFilter, setProfileFilter] = useState('all')
@@ -286,7 +300,13 @@ export function RouterDetail({ routerId }: { routerId: string }) {
           </Button>
         </div>
         <div className={`${outerBoxClass} flex-1`}>
-          {!router ? (
+          {isLoading && !router ? (
+            <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
+              <p className='text-sm text-muted-foreground'>
+                Memuat data router...
+              </p>
+            </div>
+          ) : !router ? (
             <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
               <h2 className='mb-2 text-xl font-semibold'>
                 Router Tidak Ditemukan
@@ -303,13 +323,13 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                   <h2 className='text-2xl font-semibold tracking-tight'>
                     {router.name}
                   </h2>
-                  <StatusBadge status={router.lastStatus} />
+                  <StatusBadge status={normalizeStatus(router.lastStatus)} />
                 </div>
                 <p className='mt-1 text-sm text-muted-foreground'>
                   <span className='font-mono'>
                     {router.host}:{router.port}
                   </span>{' '}
-                  - {router.ownerName}
+                  - {ownersMap[router.ownerId] ?? '—'}
                 </p>
               </div>
 
@@ -328,7 +348,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                     </DetailRow>
                     <DetailRow label='Terakhir Dicek'>
                       <span className='font-mono text-xs text-muted-foreground tabular-nums'>
-                        {router.lastCheckedAt ?? '—'}
+                        {formatCheckedAt(router.lastCheckedAt) ?? '—'}
                       </span>
                     </DetailRow>
                     <DetailRow label='Username'>
@@ -337,26 +357,8 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                       </span>
                     </DetailRow>
                     <DetailRow label='Password'>
-                      <span className='inline-flex items-center gap-2'>
-                        <span className='font-mono text-xs select-all'>
-                          {showPassword ? router.password : '••••••••'}
-                        </span>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='size-6 text-muted-foreground hover:text-foreground'
-                          onClick={() => setShowPassword((s) => !s)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className='h-3.5 w-3.5' />
-                          ) : (
-                            <Eye className='h-3.5 w-3.5' />
-                          )}
-                          <span className='sr-only'>
-                            {showPassword ? 'Sembunyikan' : 'Tampilkan'}{' '}
-                            password
-                          </span>
-                        </Button>
+                      <span className='text-xs text-muted-foreground'>
+                        Terenkripsi (AES-256-GCM)
                       </span>
                     </DetailRow>
                     <DetailRow label='Hotspot Name'>

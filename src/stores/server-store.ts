@@ -9,6 +9,8 @@ export interface MikrotikServer {
   port: number
   username: string
   useSSL: boolean
+  hotspotName?: string | null
+  dnsName?: string | null
   lastStatus: string
   lastCheckedAt: string | null
   ownerId: string

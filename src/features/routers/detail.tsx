@@ -177,8 +177,10 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   }
 
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
-  // buat voucher existing (teknisi) yang membaca activeServerId dari store.
-  const goCreateVoucher = (to: '/vouchers/add-single' | '/vouchers/add-bulk') => {
+  // buat voucher/profil existing (teknisi) yang membaca activeServerId dari store.
+  const goCreate = (
+    to: '/vouchers/add-single' | '/vouchers/add-bulk' | '/profiles/add'
+  ) => {
     if (!router) return
     setActiveServerId(router.id)
     navigate({ to })
@@ -345,11 +347,16 @@ export function RouterDetail({ routerId }: { routerId: string }) {
 
               {/* Profil hotspot */}
               <Card className={`${nestedCardClass} py-0`}>
-                <CardHeader className='pt-6'>
-                  <CardTitle>Profil Hotspot</CardTitle>
-                  <CardDescription>
-                    Paket bandwidth/durasi yang terdaftar di router ini.
-                  </CardDescription>
+                <CardHeader className='flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between'>
+                  <div>
+                    <CardTitle>Profil Hotspot</CardTitle>
+                    <CardDescription className='mt-1'>
+                      Paket bandwidth/durasi yang terdaftar di router ini.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => goCreate('/profiles/add')}>
+                    Buat Profil
+                  </Button>
                 </CardHeader>
                 <CardContent className='px-0'>
                   <div className='overflow-x-auto'>
@@ -441,7 +448,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                           <Button
                             variant='ghost'
                             className='h-auto w-full flex-col items-start justify-start gap-1.5 p-2.5 font-normal'
-                            onClick={() => goCreateVoucher('/vouchers/add-single')}
+                            onClick={() => goCreate('/vouchers/add-single')}
                           >
                             <span className='text-sm leading-none font-medium'>
                               Tunggal
@@ -453,7 +460,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                           <Button
                             variant='ghost'
                             className='h-auto w-full flex-col items-start justify-start gap-1.5 p-2.5 font-normal'
-                            onClick={() => goCreateVoucher('/vouchers/add-bulk')}
+                            onClick={() => goCreate('/vouchers/add-bulk')}
                           >
                             <span className='text-sm leading-none font-medium'>
                               Masal

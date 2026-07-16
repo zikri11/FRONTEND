@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { AxiosError } from 'axios'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   ArrowLeft,
   Check,
@@ -83,9 +88,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   buildProfiles,
-  buildVouchers,
   type HotspotProfileRow,
-  type VoucherRow,
 } from './data/dummy-router-detail'
 import {
   formatCheckedAt,
@@ -113,6 +116,17 @@ type CreatedKey = {
   key: string
 }
 
+// Baris voucher dari GET /vouchers
+type VoucherApiRow = {
+  id: string
+  username?: string
+  password?: string
+  profile?: { name?: string }
+  outletName?: string
+  status?: string
+  createdAt: string
+}
+
 function apiErrorMessage(error: unknown, fallback: string): string {
   const m =
     error instanceof AxiosError ? error.response?.data?.message : undefined
@@ -136,17 +150,13 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const seed = router ? seedFromId(router.id) : 0
 
   const [profiles, setProfiles] = useState<HotspotProfileRow[]>([])
-  const [vouchers, setVouchers] = useState<VoucherRow[]>([])
   const [dataForRouterId, setDataForRouterId] = useState<string | null>(null)
 
-  // Profil & voucher masih dummy seeded per router (bug backend: ?serverId=
-  // diabaikan) — regenerate saat router termuat/berganti.
-  // Pola "adjust state during render" (react.dev) — bukan di effect.
+  // Profil Hotspot masih dummy seeded per router — regenerate saat router
+  // termuat/berganti. Pola "adjust state during render" (react.dev).
   if (router && dataForRouterId !== router.id) {
     setDataForRouterId(router.id)
-    const generated = buildProfiles(seed)
-    setProfiles(generated)
-    setVouchers(buildVouchers(seed, generated, router.name))
+    setProfiles(buildProfiles(seed))
   }
 
   // Integrasi POS — data nyata GET /pos-keys?serverId= (backend mendukung
@@ -233,7 +243,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   const [pageSize, setPageSize] = useState(10)
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
-  const [voucherToDelete, setVoucherToDelete] = useState<VoucherRow | null>(
+  const [voucherToDelete, setVoucherToDelete] = useState<VoucherApiRow | null>(
     null
   )
 
@@ -245,26 +255,76 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     return () => clearTimeout(timer)
   }, [search])
 
-  const filtered = useMemo(() => {
-    let list = vouchers
-    if (profileFilter !== 'all') {
-      list = list.filter((v) => v.profileName === profileFilter)
-    }
-    if (statusFilter !== 'all') {
-      list = list.filter((v) => v.status === statusFilter)
-    }
-    const q = debouncedSearch.trim().toLowerCase()
-    if (q) {
-      list = list.filter((v) => v.code.toLowerCase().includes(q))
-    }
-    return list
-  }, [vouchers, profileFilter, statusFilter, debouncedSearch])
+  // Profil untuk filter Paket — data nyata GET /profiles?serverId=
+  const { data: voucherProfiles = [] } = useQuery<
+    { id: string; name: string }[]
+  >({
+    queryKey: ['router-profiles', routerId],
+    queryFn: ({ signal }) =>
+      api
+        .get('/profiles', { params: { serverId: routerId }, signal })
+        .then((r) => r.data),
+    enabled: !!router,
+  })
 
-  const totalPages = Math.ceil(filtered.length / pageSize)
+  // Tabel voucher — data nyata GET /vouchers (server-side filter + paginasi)
+  const voucherParams = {
+    serverId: routerId,
+    search: debouncedSearch || undefined,
+    profileId: profileFilter === 'all' ? undefined : profileFilter,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    skip: (currentPage - 1) * pageSize,
+    take: pageSize,
+  }
+  const {
+    data: vouchersResponse = {
+      data: [],
+      meta: { total: 0, skip: 0, take: pageSize },
+    },
+    isPending: vouchersPending,
+    isError: vouchersError,
+  } = useQuery<{
+    data: VoucherApiRow[]
+    meta: { total: number; skip: number; take: number }
+  }>({
+    queryKey: ['router-vouchers', routerId, voucherParams],
+    queryFn: ({ signal }) =>
+      api.get('/vouchers', { params: voucherParams, signal }).then((r) => r.data),
+    enabled: !!router,
+    placeholderData: keepPreviousData,
+  })
+  const pageRows = vouchersResponse.data
+  const voucherTotal = vouchersResponse.meta.total
+  const totalPages = Math.ceil(voucherTotal / pageSize)
   const safePage = Math.min(currentPage, Math.max(1, totalPages))
-  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1
-  const rangeEnd = Math.min(safePage * pageSize, filtered.length)
+  const rangeStart = voucherTotal === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const rangeEnd = Math.min(safePage * pageSize, voucherTotal)
+
+  const invalidateVouchers = () => {
+    queryClient.invalidateQueries({ queryKey: ['router-vouchers', routerId] })
+    queryClient.invalidateQueries({
+      queryKey: ['router-voucher-count', routerId],
+    })
+  }
+
+  const deleteVouchersMutation = useMutation({
+    mutationFn: (ids: string[]) => api.post('/vouchers/delete-bulk', { ids }),
+    onSuccess: (_data, ids) => {
+      toast.success(`${ids.length} voucher berhasil dihapus`)
+      setSelectedRows(new Set())
+      invalidateVouchers()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal menghapus voucher')),
+    onSettled: () => {
+      setIsBulkDeleteOpen(false)
+      setVoucherToDelete(null)
+    },
+  })
+
+  const printSingleVoucher = (id: string) => {
+    const baseUrl = api.defaults.baseURL || 'http://localhost:4000/api'
+    window.open(`${baseUrl}/vouchers/pdf/single/${id}`, '_blank')
+  }
 
   // Statistik voucher — count nyata dari GET /vouchers?serverId=&status= (bug
   // filter serverId sudah diperbaiki backend; scope SA global). take=1, ambil
@@ -324,17 +384,12 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   }
 
   const handleBulkDelete = () => {
-    setVouchers((prev) => prev.filter((v) => !selectedRows.has(v.id)))
-    toast.success(`${selectedRows.size} voucher berhasil dihapus (dummy)`)
-    setSelectedRows(new Set())
-    setIsBulkDeleteOpen(false)
+    deleteVouchersMutation.mutate(Array.from(selectedRows))
   }
 
   const handleSingleDelete = () => {
     if (!voucherToDelete) return
-    setVouchers((prev) => prev.filter((v) => v.id !== voucherToDelete.id))
-    setVoucherToDelete(null)
-    toast.success('Voucher berhasil dihapus (dummy)')
+    deleteVouchersMutation.mutate([voucherToDelete.id])
   }
 
   const openProfileEdit = (profile: HotspotProfileRow) => {
@@ -834,8 +889,8 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='all'>Semua Paket</SelectItem>
-                          {profiles.map((p) => (
-                            <SelectItem key={p.id} value={p.name}>
+                          {voucherProfiles.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
                               {p.name}
                             </SelectItem>
                           ))}
@@ -907,7 +962,25 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pageRows.length === 0 ? (
+                        {vouchersPending ? (
+                          <TableRow className='hover:bg-transparent'>
+                            <TableCell
+                              colSpan={7}
+                              className='h-24 text-center text-sm text-muted-foreground'
+                            >
+                              Memuat voucher...
+                            </TableCell>
+                          </TableRow>
+                        ) : vouchersError ? (
+                          <TableRow className='hover:bg-transparent'>
+                            <TableCell
+                              colSpan={7}
+                              className='h-24 text-center text-sm text-muted-foreground'
+                            >
+                              Gagal memuat voucher.
+                            </TableCell>
+                          </TableRow>
+                        ) : pageRows.length === 0 ? (
                           <TableRow className='hover:bg-transparent'>
                             <TableCell
                               colSpan={7}
@@ -940,7 +1013,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                               <TableCell>
                                 <div className='flex flex-col whitespace-nowrap'>
                                   <span className='font-mono text-xs text-foreground'>
-                                    {voucher.code}
+                                    {voucher.username}
                                   </span>
                                   <span className='font-mono text-xs text-muted-foreground'>
                                     {voucher.password}
@@ -948,10 +1021,10 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                                 </div>
                               </TableCell>
                               <TableCell className='text-sm text-foreground whitespace-nowrap'>
-                                {voucher.profileName}
+                                {voucher.profile?.name ?? '—'}
                               </TableCell>
                               <TableCell className='text-sm text-muted-foreground whitespace-nowrap'>
-                                {voucher.outletName}
+                                {voucher.outletName ?? '—'}
                               </TableCell>
                               <TableCell>
                                 {voucher.status === 'UNUSED' ? (
@@ -972,7 +1045,14 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                                 )}
                               </TableCell>
                               <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
-                                {voucher.createdAt}
+                                {new Date(voucher.createdAt).toLocaleDateString(
+                                  'id-ID',
+                                  {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  }
+                                )}
                               </TableCell>
                               <TableCell className='pe-4 text-right'>
                                 <DropdownMenu>
@@ -991,9 +1071,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                                   <DropdownMenuContent align='end'>
                                     <DropdownMenuItem
                                       onClick={() =>
-                                        toast.info(
-                                          'Unduh PDF belum tersambung (dummy)'
-                                        )
+                                        printSingleVoucher(voucher.id)
                                       }
                                     >
                                       Unduh PDF
@@ -1020,7 +1098,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                   {/* Footer paginasi */}
                   <div className='flex flex-col items-center justify-between gap-3 border-t px-4 py-3 sm:flex-row'>
                     <div className='text-sm text-muted-foreground tabular-nums'>
-                      Menampilkan {rangeStart}–{rangeEnd} dari {filtered.length}{' '}
+                      Menampilkan {rangeStart}–{rangeEnd} dari {voucherTotal}{' '}
                       voucher
                     </div>
                     <div className='flex items-center gap-4'>
@@ -1305,7 +1383,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              Voucher <strong>{voucherToDelete?.code}</strong> akan dihapus
+              Voucher <strong>{voucherToDelete?.username}</strong> akan dihapus
               dari router ini.
             </AlertDialogDescription>
           </AlertDialogHeader>

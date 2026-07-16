@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { KeyRound, Router, Users } from 'lucide-react'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,9 +37,9 @@ const CURRENT_PLAN = {
 }
 
 const USAGE = [
-  { label: 'Router', used: 18, limit: 25, caption: 'dari kuota paket Standard' },
-  { label: 'Teknisi', used: 4, limit: 10, caption: 'dari kuota paket Standard' },
-  { label: 'API Key', used: 7, limit: 15, caption: 'dari kuota paket Standard' },
+  { label: 'Router', used: 18, limit: 25, unit: 'router', icon: Router },
+  { label: 'Teknisi', used: 4, limit: 10, unit: 'teknisi', icon: Users },
+  { label: 'API Key', used: 7, limit: 15, unit: 'API key', icon: KeyRound },
 ]
 
 type InvoiceStatus = 'Lunas' | 'Pending' | 'Gagal'
@@ -124,32 +125,34 @@ export function BillingPage() {
           </Card>
 
           {/* Pemakaian periode ini */}
-          <div className='grid gap-4 sm:grid-cols-3'>
-            {USAGE.map((item) => (
-              <Card key={item.label} className={nestedCardClass}>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    {item.label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-                    {item.used}{' '}
-                    <span className='text-base font-normal text-muted-foreground'>
-                      / {item.limit}
-                    </span>
+          <Card className={nestedCardClass}>
+            <CardHeader>
+              <CardTitle>Pemakaian Periode Ini</CardTitle>
+              <CardDescription>Kuota terpakai dari paket Standard.</CardDescription>
+            </CardHeader>
+            <CardContent className='flex flex-col gap-6'>
+              {USAGE.map((item) => {
+                const pct = Math.round((item.used / item.limit) * 100)
+                return (
+                  <div key={item.label}>
+                    <div className='flex items-center justify-between'>
+                      <span className='flex items-center gap-2 text-sm font-medium'>
+                        <item.icon className='h-4 w-4 text-muted-foreground' />
+                        {item.label}
+                      </span>
+                      <span className='text-sm font-medium tabular-nums'>
+                        {pct}%
+                      </span>
+                    </div>
+                    <Progress value={pct} className='mt-2 h-2' />
+                    <p className='mt-2 text-xs text-muted-foreground tabular-nums'>
+                      {item.used} dari {item.limit} {item.unit}
+                    </p>
                   </div>
-                  <Progress
-                    value={Math.round((item.used / item.limit) * 100)}
-                    className='mt-3 h-2'
-                  />
-                  <p className='mt-2 text-xs text-muted-foreground'>
-                    {item.caption}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                )
+              })}
+            </CardContent>
+          </Card>
 
           {/* Riwayat invoice */}
           <Card className={`${nestedCardClass} py-0`}>

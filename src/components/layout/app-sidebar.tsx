@@ -23,14 +23,18 @@ export function AppSidebar() {
     avatar: '/avatars/shadcn.jpg',
   }
 
+  // SUPER_ADMIN & OWNER tidak terikat router terpilih — "Pilih Router" hanya
+  // untuk TEKNISI; role lain menaruh profil (NavUser) di posisi atas.
+  const isRouterScoped = user?.role === 'TEKNISI'
+
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>
-        <TeamSwitcher />
-
-        {/* Replace <TeamSwitch /> with the following <AppTitle />
-         /* if you want to use the normal app title instead of TeamSwitch dropdown */}
-        {/* <AppTitle /> */}
+        {isRouterScoped ? (
+          <TeamSwitcher />
+        ) : (
+          <NavUser user={dynamicUser} />
+        )}
       </SidebarHeader>
       <SidebarContent>
         {sidebarData.navGroups.map((group) => {
@@ -72,9 +76,11 @@ export function AppSidebar() {
           return <NavGroup key={group.title} {...group} items={filteredItems} />
         })}
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={dynamicUser} />
-      </SidebarFooter>
+      {isRouterScoped && (
+        <SidebarFooter>
+          <NavUser user={dynamicUser} />
+        </SidebarFooter>
+      )}
       <SidebarRail />
     </Sidebar>
   )

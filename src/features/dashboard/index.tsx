@@ -548,23 +548,11 @@ export function Dashboard() {
                         </div>
                         {isOwner ? (
                           <div className='mt-1 flex items-center gap-1.5'>
-                            <Badge variant='destructive-light' size='sm'>
-                              <svg
-                                xmlns='http://www.w3.org/2000/svg'
-                                viewBox='0 0 24 24'
-                                fill='none'
-                                stroke='currentColor'
-                                strokeLinecap='round'
-                                strokeLinejoin='round'
-                                strokeWidth='2'
-                              >
-                                <path d='M16 17h6v-6' />
-                                <path d='m22 17-8.5-8.5-5 5L2 6' />
-                              </svg>
-                              -12
+                            <Badge variant='success-light' size='sm'>
+                              35
                             </Badge>
                             <span className='text-xs text-muted-foreground'>
-                              lebih sedikit dari minggu kemarin
+                              pengguna aktif sekarang dari seluruh outlet
                             </span>
                           </div>
                         ) : (

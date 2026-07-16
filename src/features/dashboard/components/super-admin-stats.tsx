@@ -69,8 +69,8 @@ export function SuperAdminStats() {
       {STATS.map((stat) => {
         const card = (
           <Card
-            className={`${nestedCardClass} ${
-              stat.href ? 'h-full transition-colors hover:bg-muted/30' : ''
+            className={`${nestedCardClass} h-full ${
+              stat.href ? 'transition-colors hover:bg-muted/30' : ''
             }`}
           >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -124,12 +124,14 @@ export function SuperAdminStats() {
           <Link
             key={stat.title}
             to={stat.href}
-            className='block transition-transform active:scale-[0.98]'
+            className='block h-full transition-transform active:scale-[0.98]'
           >
             {card}
           </Link>
         ) : (
-          <div key={stat.title}>{card}</div>
+          <div key={stat.title} className='h-full'>
+            {card}
+          </div>
         )
       })}
     </div>

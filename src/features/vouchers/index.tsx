@@ -474,7 +474,7 @@ export function Vouchers() {
                           setCurrentPage(1)
                         }}
                       >
-                        <SelectTrigger className='w-full sm:w-[160px]'>
+                        <SelectTrigger className='w-full sm:w-[140px]'>
                           <SelectValue placeholder='Filter Status' />
                         </SelectTrigger>
                         <SelectContent>

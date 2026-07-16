@@ -31,7 +31,31 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { DUMMY_OWNERS, type PlanTier } from './data/dummy-owners'
+
+const FILTER_MONTHS = [
+  { label: 'Januari', value: '01' },
+  { label: 'Februari', value: '02' },
+  { label: 'Maret', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'Mei', value: '05' },
+  { label: 'Juni', value: '06' },
+  { label: 'Juli', value: '07' },
+  { label: 'Agustus', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'Oktober', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'Desember', value: '12' },
+]
+
+const FILTER_YEARS = ['2024', '2025', '2026', '2027']
 
 // Kuota dummy per plan — sampai backend punya endpoint detail/agregat per tenant.
 const PLAN_META: Record<
@@ -257,12 +281,39 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
 
               {/* Monitoring outlet */}
               <Card className={`${nestedCardClass} py-0`}>
-                <CardHeader className='pt-6'>
-                  <CardTitle>Monitoring Outlet</CardTitle>
-                  <CardDescription>
-                    Status dan ketersediaan router milik owner ini, 30 hari
-                    terakhir.
-                  </CardDescription>
+                <CardHeader className='flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between'>
+                  <div>
+                    <CardTitle>Monitoring Outlet</CardTitle>
+                    <CardDescription className='mt-1'>
+                      Status dan ketersediaan router milik owner ini.
+                    </CardDescription>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Select defaultValue='07'>
+                      <SelectTrigger className='w-[140px] bg-background'>
+                        <SelectValue placeholder='Bulan' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FILTER_MONTHS.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select defaultValue='2026'>
+                      <SelectTrigger className='w-[100px] bg-background'>
+                        <SelectValue placeholder='Tahun' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FILTER_YEARS.map((y) => (
+                          <SelectItem key={y} value={y}>
+                            {y}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent className='px-0'>
                   <div className='overflow-x-auto'>

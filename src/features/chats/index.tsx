@@ -27,12 +27,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Sheet,
@@ -56,10 +56,10 @@ type Message = {
 }
 
 const AI_PROVIDERS = [
-  { value: "gemini", label: "Gemini", color: "bg-blue-500", shadow: "shadow-[0_0_8px_rgba(59,130,246,0.5)]" },
-  { value: "openai", label: "OpenAI", color: "bg-emerald-500", shadow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
-  { value: "anthropic", label: "Anthropic", color: "bg-orange-500", shadow: "shadow-[0_0_8px_rgba(249,115,22,0.5)]" },
-  { value: "openrouter", label: "OpenRouter", color: "bg-indigo-500", shadow: "shadow-[0_0_8px_rgba(99,102,241,0.5)]" },
+  { value: "gemini", label: "Gemini", description: "Google — cepat & ringan", color: "bg-blue-500" },
+  { value: "openai", label: "OpenAI", description: "GPT — serba bisa", color: "bg-emerald-500" },
+  { value: "anthropic", label: "Anthropic", description: "Claude — analisis mendalam", color: "bg-orange-500" },
+  { value: "openrouter", label: "OpenRouter", description: "Gateway multi-model", color: "bg-indigo-500" },
 ]
 
 export function Chats() {
@@ -506,33 +506,29 @@ export function Chats() {
                     </div>
                   )}
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button type="button" size="icon" variant="outline" className="shrink-0 rounded-full h-12 w-12 border border-border/40 bg-background/50 backdrop-blur-sm shadow-sm hover:bg-accent/50 hover:border-accent/80 hover:shadow-md transition-all duration-300 relative group overflow-hidden">
-                        <Bot className="h-[22px] w-[22px] text-foreground/70 group-hover:text-foreground group-hover:scale-110 transition-all duration-300" />
-                        <span className={`absolute bottom-[10px] right-[10px] h-2.5 w-2.5 rounded-full border-[1.5px] border-background transition-all duration-300 ${AI_PROVIDERS.find(p => p.value === selectedProvider)?.color || 'bg-primary'} ${AI_PROVIDERS.find(p => p.value === selectedProvider)?.shadow || ''}`}></span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="top" className="w-56 p-1.5 rounded-2xl border border-border/40 bg-background/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=top]:slide-in-from-bottom-2">
-                      <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        Pilih AI Provider
-                      </div>
-                      <DropdownMenuSeparator className="bg-border/30 mx-1 mb-1" />
+                  <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                    <SelectTrigger
+                      aria-label="Pilih AI Provider"
+                      className="shrink-0 self-center w-[160px] rounded-full data-[size=default]:h-12 px-4 [&_small]:hidden"
+                    >
+                      <SelectValue placeholder="Pilih AI" />
+                    </SelectTrigger>
+                    <SelectContent side="top">
                       {AI_PROVIDERS.map((provider) => (
-                        <DropdownMenuItem 
-                          key={provider.value} 
-                          className={`px-3 py-2.5 cursor-pointer flex justify-between items-center rounded-xl transition-all duration-200 focus:bg-transparent ${selectedProvider === provider.value ? 'bg-primary/10 text-primary font-medium shadow-sm' : 'hover:bg-muted/60 text-foreground/80'}`} 
-                          onClick={() => setSelectedProvider(provider.value)}
-                        >
-                          <span className="flex items-center gap-3">
-                            <span className={`h-2.5 w-2.5 rounded-full ${provider.color} ${selectedProvider === provider.value ? provider.shadow : ''}`}></span>
-                            {provider.label}
+                        <SelectItem key={provider.value} value={provider.value}>
+                          <span className="flex flex-col items-start gap-px">
+                            <span className="flex items-center gap-2 font-medium">
+                              <span className={`h-2 w-2 rounded-full ${provider.color}`} />
+                              {provider.label}
+                            </span>
+                            <small className="text-xs text-muted-foreground">
+                              {provider.description}
+                            </small>
                           </span>
-                          {selectedProvider === provider.value && <Check className="h-4 w-4 text-primary" />}
-                        </DropdownMenuItem>
+                        </SelectItem>
                       ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </SelectContent>
+                  </Select>
                   <Textarea
                     ref={inputRef}
                     placeholder="Tanya dengan @router, atau ketik masalah Anda... (Enter kirim, Shift+Enter baris baru)"

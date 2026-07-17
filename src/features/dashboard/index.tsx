@@ -27,7 +27,6 @@ import { DisconnectedRouterPlaceholder } from '@/components/disconnected-router-
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { TopNav } from '@/components/layout/top-nav'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { RouterLoadingOverlay } from '@/components/router-loading-overlay'
 import { Search } from '@/components/search'
@@ -297,8 +296,7 @@ export function Dashboard() {
     <>
       {/* ===== Top Heading ===== */}
       <Header>
-        <TopNav links={topNav} className='me-auto' />
-        <Search />
+        <Search className='me-auto' />
         <ThemeSwitch />
         <ConfigDrawer />
         <ProfileDropdown />
@@ -654,29 +652,3 @@ export function Dashboard() {
   )
 }
 
-const topNav = [
-  {
-    title: 'Overview',
-    href: 'dashboard/overview',
-    isActive: true,
-    disabled: false,
-  },
-  {
-    title: 'Customers',
-    href: 'dashboard/customers',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Products',
-    href: 'dashboard/products',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Settings',
-    href: 'dashboard/settings',
-    isActive: false,
-    disabled: true,
-  },
-]

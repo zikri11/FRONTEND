@@ -86,16 +86,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  buildProfiles,
-  type HotspotProfileRow,
-} from './data/dummy-router-detail'
-import {
-  formatCheckedAt,
-  normalizeStatus,
-  seedFromId,
-  useOwnersMap,
-} from './utils'
+import { formatCheckedAt, normalizeStatus, useOwnersMap } from './utils'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
@@ -127,6 +118,16 @@ type VoucherApiRow = {
   createdAt: string
 }
 
+// Profil hotspot dari GET /profiles
+type ProfileApiRow = {
+  id: string
+  name: string
+  rateLimit?: string
+  sharedUsers?: number
+  validity?: string
+  syncedToRouter?: boolean
+}
+
 function apiErrorMessage(error: unknown, fallback: string): string {
   const m =
     error instanceof AxiosError ? error.response?.data?.message : undefined
@@ -147,17 +148,45 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   }, [])
 
   const router = servers.find((s) => s.id === routerId) ?? null
-  const seed = router ? seedFromId(router.id) : 0
 
-  const [profiles, setProfiles] = useState<HotspotProfileRow[]>([])
-  const [dataForRouterId, setDataForRouterId] = useState<string | null>(null)
+  // Profil hotspot — data nyata GET /profiles?serverId= (serverId dihormati,
+  // scope SA global). Dipakai tabel Profil Hotspot + dropdown filter Paket.
+  const { data: profiles = [] } = useQuery<ProfileApiRow[]>({
+    queryKey: ['router-profiles', routerId],
+    queryFn: ({ signal }) =>
+      api
+        .get('/profiles', { params: { serverId: routerId }, signal })
+        .then((r) => r.data),
+    enabled: !!router,
+  })
+  const invalidateProfiles = () =>
+    queryClient.invalidateQueries({ queryKey: ['router-profiles', routerId] })
 
-  // Profil Hotspot masih dummy seeded per router — regenerate saat router
-  // termuat/berganti. Pola "adjust state during render" (react.dev).
-  if (router && dataForRouterId !== router.id) {
-    setDataForRouterId(router.id)
-    setProfiles(buildProfiles(seed))
-  }
+  const editProfileMutation = useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string
+      body: { name: string; rateLimit: string; sharedUsers: number }
+    }) => api.patch(`/profiles/${id}`, body),
+    onSuccess: () => {
+      toast.success('Profil berhasil diperbarui')
+      setProfileToEdit(null)
+      invalidateProfiles()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal memperbarui profil')),
+  })
+
+  const deleteProfileMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/profiles/${id}`),
+    onSuccess: () => {
+      toast.success('Profil berhasil dihapus')
+      invalidateProfiles()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal menghapus profil')),
+    onSettled: () => setProfileToDelete(null),
+  })
 
   // Integrasi POS — data nyata GET /pos-keys?serverId= (backend mendukung
   // filter server-side + scope SA global; lihat pos-keys.service).
@@ -226,14 +255,13 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     onSettled: () => setKeyToDelete(null),
   })
 
-  const [profileToEdit, setProfileToEdit] = useState<HotspotProfileRow | null>(
-    null
-  )
+  const [profileToEdit, setProfileToEdit] = useState<ProfileApiRow | null>(null)
   const [editProfileName, setEditProfileName] = useState('')
   const [editRateLimit, setEditRateLimit] = useState('')
-  const [editValidity, setEditValidity] = useState('')
-  const [profileToDelete, setProfileToDelete] =
-    useState<HotspotProfileRow | null>(null)
+  const [editSharedUsers, setEditSharedUsers] = useState(1)
+  const [profileToDelete, setProfileToDelete] = useState<ProfileApiRow | null>(
+    null
+  )
   const [keyToDelete, setKeyToDelete] = useState<PosKey | null>(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -254,18 +282,6 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     }, 300)
     return () => clearTimeout(timer)
   }, [search])
-
-  // Profil untuk filter Paket — data nyata GET /profiles?serverId=
-  const { data: voucherProfiles = [] } = useQuery<
-    { id: string; name: string }[]
-  >({
-    queryKey: ['router-profiles', routerId],
-    queryFn: ({ signal }) =>
-      api
-        .get('/profiles', { params: { serverId: routerId }, signal })
-        .then((r) => r.data),
-    enabled: !!router,
-  })
 
   // Tabel voucher — data nyata GET /vouchers (server-side filter + paginasi)
   const voucherParams = {
@@ -392,36 +408,28 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     deleteVouchersMutation.mutate([voucherToDelete.id])
   }
 
-  const openProfileEdit = (profile: HotspotProfileRow) => {
+  const openProfileEdit = (profile: ProfileApiRow) => {
     setProfileToEdit(profile)
     setEditProfileName(profile.name)
-    setEditRateLimit(profile.rateLimit)
-    setEditValidity(profile.validity)
+    setEditRateLimit(profile.rateLimit ?? '')
+    setEditSharedUsers(profile.sharedUsers ?? 1)
   }
 
   const handleProfileEditSave = () => {
     if (!profileToEdit) return
-    setProfiles((prev) =>
-      prev.map((p) =>
-        p.id === profileToEdit.id
-          ? {
-              ...p,
-              name: editProfileName,
-              rateLimit: editRateLimit,
-              validity: editValidity,
-            }
-          : p
-      )
-    )
-    setProfileToEdit(null)
-    toast.success('Profil berhasil diperbarui (dummy)')
+    editProfileMutation.mutate({
+      id: profileToEdit.id,
+      body: {
+        name: editProfileName,
+        rateLimit: editRateLimit,
+        sharedUsers: editSharedUsers,
+      },
+    })
   }
 
   const handleProfileDelete = () => {
     if (!profileToDelete) return
-    setProfiles((prev) => prev.filter((p) => p.id !== profileToDelete.id))
-    setProfileToDelete(null)
-    toast.success('Profil berhasil dihapus (dummy)')
+    deleteProfileMutation.mutate(profileToDelete.id)
   }
 
   const toggleKeyActive = (key: PosKey) => {
@@ -702,7 +710,17 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {profiles.map((profile) => (
+                        {profiles.length === 0 ? (
+                          <TableRow className='hover:bg-transparent'>
+                            <TableCell
+                              colSpan={6}
+                              className='h-24 text-center text-sm text-muted-foreground'
+                            >
+                              Belum ada profil hotspot di router ini.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          profiles.map((profile) => (
                           <TableRow key={profile.id}>
                             <TableCell className='ps-4 text-sm text-foreground whitespace-nowrap'>
                               {profile.name}
@@ -725,13 +743,13 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                               )}
                             </TableCell>
                             <TableCell className='font-mono text-xs whitespace-nowrap'>
-                              {profile.rateLimit}
+                              {profile.rateLimit ?? '—'}
                             </TableCell>
                             <TableCell className='text-right text-sm tabular-nums'>
-                              {profile.sharedUsers}
+                              {profile.sharedUsers ?? '—'}
                             </TableCell>
                             <TableCell className='font-mono text-xs whitespace-nowrap'>
-                              {profile.validity}
+                              {profile.validity ?? '—'}
                             </TableCell>
                             <TableCell className='pe-4 text-right'>
                               <DropdownMenu>
@@ -762,7 +780,8 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                               </DropdownMenu>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -889,7 +908,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='all'>Semua Paket</SelectItem>
-                          {voucherProfiles.map((p) => (
+                          {profiles.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name}
                             </SelectItem>
@@ -1302,20 +1321,31 @@ export function RouterDetail({ routerId }: { routerId: string }) {
               />
             </div>
             <div className='grid gap-2'>
-              <Label htmlFor='profile-validity'>Masa Aktif</Label>
+              <Label htmlFor='profile-shared'>Shared Users</Label>
               <Input
-                id='profile-validity'
-                className='w-[140px] font-mono'
-                value={editValidity}
-                onChange={(e) => setEditValidity(e.target.value)}
+                id='profile-shared'
+                type='number'
+                min={1}
+                className='w-[140px] tabular-nums'
+                value={editSharedUsers}
+                onChange={(e) => setEditSharedUsers(Number(e.target.value))}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setProfileToEdit(null)}>
+            <Button
+              variant='outline'
+              onClick={() => setProfileToEdit(null)}
+              disabled={editProfileMutation.isPending}
+            >
               Batal
             </Button>
-            <Button onClick={handleProfileEditSave}>Simpan</Button>
+            <Button
+              onClick={handleProfileEditSave}
+              disabled={editProfileMutation.isPending}
+            >
+              {editProfileMutation.isPending ? 'Menyimpan...' : 'Simpan'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1330,18 +1360,22 @@ export function RouterDetail({ routerId }: { routerId: string }) {
             <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
               Profil <strong>{profileToDelete?.name}</strong> akan dihapus dari
-              router ini.
+              database dan dicabut dari router MikroTik.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProfileToDelete(null)}>
+            <AlertDialogCancel
+              onClick={() => setProfileToDelete(null)}
+              disabled={deleteProfileMutation.isPending}
+            >
               Batal
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleProfileDelete}
+              disabled={deleteProfileMutation.isPending}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
-              Hapus Profil
+              {deleteProfileMutation.isPending ? 'Menghapus...' : 'Hapus Profil'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -41,11 +41,3 @@ export function formatCheckedAt(iso: string | null | undefined): string | null {
     minute: '2-digit',
   })
 }
-
-// Seed numerik stabil dari id server — untuk generator dummy profil/voucher/POS
-// key sampai endpoint per-router di-wiring (bug backend: ?serverId= diabaikan).
-export function seedFromId(id: string): number {
-  let sum = 0
-  for (const ch of id) sum = (sum + ch.charCodeAt(0)) % 9973
-  return sum
-}

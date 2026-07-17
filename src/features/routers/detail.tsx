@@ -152,6 +152,11 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   }, [])
 
   const router = servers.find((s) => s.id === routerId) ?? null
+  // Router offline → operasi tulis ke router (buat profil/voucher) pasti gagal,
+  // jadi tombolnya dinonaktifkan.
+  const isOffline = router
+    ? normalizeStatus(router.lastStatus) === 'OFFLINE'
+    : false
 
   // Profil hotspot — data nyata GET /profiles?serverId= (serverId dihormati,
   // scope SA global). Dipakai tabel Profil Hotspot + dropdown filter Paket.
@@ -803,7 +808,11 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                       Paket bandwidth/durasi yang terdaftar di router ini.
                     </CardDescription>
                   </div>
-                  <Button onClick={() => setIsCreateProfileOpen(true)}>
+                  <Button
+                    onClick={() => setIsCreateProfileOpen(true)}
+                    disabled={isOffline}
+                    title={isOffline ? 'Router sedang offline' : undefined}
+                  >
                     Buat Profil
                   </Button>
                 </CardHeader>
@@ -972,7 +981,14 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                   <div className='flex items-center gap-2'>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button>Buat Voucher</Button>
+                        <Button
+                          disabled={isOffline}
+                          title={
+                            isOffline ? 'Router sedang offline' : undefined
+                          }
+                        >
+                          Buat Voucher
+                        </Button>
                       </PopoverTrigger>
                       <PopoverContent align='end' className='w-64 p-2'>
                         <div className='grid gap-1'>

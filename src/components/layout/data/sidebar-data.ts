@@ -52,12 +52,6 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
         },
         {
-          // Hanya tampil untuk TEKNISI (OWNER/SA pakai nav group sendiri).
-          title: 'Riwayat POS',
-          url: '/pos-transactions',
-          icon: ReceiptText,
-        },
-        {
           title: 'Kelola Owner',
           url: '/users',
           icon: Users,
@@ -116,6 +110,11 @@ export const sidebarData: SidebarData = {
               title: 'Kelola Key',
               url: '/developer/keys',
               icon: Key,
+            },
+            {
+              title: 'Riwayat POS',
+              url: '/pos-transactions',
+              icon: ReceiptText,
             },
             {
               title: 'Dokumentasi API',

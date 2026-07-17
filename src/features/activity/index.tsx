@@ -1,6 +1,13 @@
 import { useState } from 'react'
-import { MoreHorizontalIcon, Copy, Check, Download } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import {
+  MoreHorizontalIcon,
+  Copy,
+  Check,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +24,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -51,6 +65,13 @@ type ActivityLog = {
   server?: { name?: string }
 }
 
+type ActivityResponse = {
+  data: ActivityLog[]
+  meta: { total: number; skip: number; take: number }
+}
+
+const PAGE_SIZES = [10, 25, 50, 100]
+
 // Truncation berbasis JUMLAH KATA (bukan CSS ellipsis / lebar elemen): >5 kata
 // → 5 kata pertama + '...'. Presentation only; teks penuh tetap ada (tooltip).
 function truncateWords(text: string, max = 5) {
@@ -63,6 +84,16 @@ export function ActivityHistory() {
   const { activeServerId, isLoading } = useServerStore()
   const [detailLog, setDetailLog] = useState<ActivityLog | null>(null)
   const [copied, setCopied] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  // Reset ke halaman 1 saat router aktif berganti — pola "adjust state during
+  // render" (bukan useEffect) agar tak kena react-hooks/set-state-in-effect.
+  const [prevServerId, setPrevServerId] = useState(activeServerId)
+  if (activeServerId !== prevServerId) {
+    setPrevServerId(activeServerId)
+    setCurrentPage(1)
+  }
 
   const detailJson = detailLog ? JSON.stringify(detailLog, null, 2) : ''
 
@@ -84,21 +115,28 @@ export function ActivityHistory() {
 
   // Live activity feed — polled every 3s to meet the <5s freshness SLA. This
   // hits the backend log endpoint (DB), NOT the router, so it's cheap.
-  const {
-    data: activityLogs = [],
-    isPending,
-    isError,
-    refetch,
-  } = useQuery<ActivityLog[]>({
-    queryKey: qk.activity(activeServerId ?? 'none'),
+  const skip = (currentPage - 1) * pageSize
+
+  const { data, isPending, isError, refetch } = useQuery<ActivityResponse>({
+    queryKey: [...qk.activity(activeServerId ?? 'none'), skip, pageSize],
     queryFn: ({ signal }) =>
       api
-        .get('/activity-log', { params: { serverId: activeServerId, take: 50 }, signal })
-        .then((res) => res.data?.data ?? res.data ?? []),
+        .get('/activity-log', {
+          params: { serverId: activeServerId, skip, take: pageSize },
+          signal,
+        })
+        .then((res) => res.data as ActivityResponse),
     enabled: !!activeServerId,
     refetchInterval: 3000,
     refetchIntervalInBackground: false,
+    placeholderData: keepPreviousData,
   })
+
+  const activityLogs = data?.data ?? []
+  const total = data?.meta?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const rangeStart = total === 0 ? 0 : skip + 1
+  const rangeEnd = Math.min(skip + pageSize, total)
 
   return (
     <>
@@ -227,6 +265,61 @@ export function ActivityHistory() {
               )}
             </TableBody>
           </Table>
+
+          <div className='flex flex-col items-center justify-between gap-3 border-t px-4 py-3 sm:flex-row'>
+            <div className='text-sm text-muted-foreground tabular-nums'>
+              Menampilkan {rangeStart}–{rangeEnd} dari {total} aktivitas
+            </div>
+            <div className='flex items-center gap-4'>
+              <div className='flex items-center space-x-2 text-sm text-muted-foreground'>
+                <span>Tampilkan</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(v) => {
+                    setPageSize(Number(v))
+                    setCurrentPage(1)
+                  }}
+                >
+                  <SelectTrigger className='h-8 w-[70px]'>
+                    <SelectValue placeholder={pageSize.toString()} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZES.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span>per halaman</span>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className='h-4 w-4' />
+                  <span className='sr-only'>Previous</span>
+                </Button>
+                <div className='px-2 text-sm font-medium tabular-nums'>
+                  Hal {currentPage} dari {totalPages}
+                </div>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
+                  disabled={currentPage >= totalPages}
+                >
+                  <ChevronRight className='h-4 w-4' />
+                  <span className='sr-only'>Next</span>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
         </div>
         </>

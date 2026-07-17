@@ -6,9 +6,11 @@ import { useServerStore } from '@/stores/server-store'
 import { Badge } from '@/components/reui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-// Statistik platform untuk SUPER_ADMIN. Total Router & Total Transaksi POS
-// pakai data nyata (GET /servers & GET /pos/transactions, keduanya global untuk
-// SA). Total User & Teknisi masih dummy sampai backend punya endpoint agregat.
+// Statistik platform SUPER_ADMIN — semua kartu pakai data nyata global:
+// User (owner) & Teknisi dari GET /users?role=, Router dari GET /servers,
+// Transaksi POS dari GET /pos/transactions. Delta "baru bulan ini" dihitung
+// dari createdAt tiap entitas; POS tanpa delta (endpoint tak punya filter
+// tanggal).
 type PlatformStat = {
   title: string
   value: string
@@ -19,17 +21,36 @@ type PlatformStat = {
   href?: '/users'
 }
 
+type UserLite = { id: string; createdAt: string }
+
 export function SuperAdminStats() {
   const { servers } = useServerStore()
-  const routerTotal = servers.length
   const nowDate = new Date()
-  const routerNewThisMonth = servers.filter((s) => {
-    const created = new Date(s.createdAt)
+  const createdThisMonth = (iso: string) => {
+    const d = new Date(iso)
     return (
-      created.getFullYear() === nowDate.getFullYear() &&
-      created.getMonth() === nowDate.getMonth()
+      d.getFullYear() === nowDate.getFullYear() &&
+      d.getMonth() === nowDate.getMonth()
     )
-  }).length
+  }
+
+  const { data: owners = [] } = useQuery({
+    queryKey: ['sa-users', 'OWNER'],
+    queryFn: ({ signal }) =>
+      api
+        .get('/users', { params: { role: 'OWNER' }, signal })
+        .then((r) => (r.data ?? []) as UserLite[]),
+    staleTime: 60_000,
+  })
+
+  const { data: teknisi = [] } = useQuery({
+    queryKey: ['sa-users', 'TEKNISI'],
+    queryFn: ({ signal }) =>
+      api
+        .get('/users', { params: { role: 'TEKNISI' }, signal })
+        .then((r) => (r.data ?? []) as UserLite[]),
+    staleTime: 60_000,
+  })
 
   const { data: posTotal = 0 } = useQuery({
     queryKey: ['sa-pos-total'],
@@ -39,12 +60,17 @@ export function SuperAdminStats() {
         .then((r) => r.data?.meta?.total ?? 0),
   })
 
+  const ownerNew = owners.filter((u) => createdThisMonth(u.createdAt)).length
+  const teknisiNew = teknisi.filter((u) => createdThisMonth(u.createdAt)).length
+  const routerNew = servers.filter((s) => createdThisMonth(s.createdAt)).length
+
   const stats: PlatformStat[] = [
     {
       title: 'Total User',
-      value: '128',
-      delta: '+12',
-      deltaCaption: 'user baru bulan ini',
+      value: owners.length.toLocaleString('id-ID'),
+      delta: ownerNew > 0 ? `+${ownerNew}` : undefined,
+      deltaCaption: 'owner baru bulan ini',
+      subtitle: 'total owner terdaftar',
       href: '/users',
       iconPaths: [
         'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2',
@@ -54,17 +80,18 @@ export function SuperAdminStats() {
     },
     {
       title: 'Total Teknisi',
-      value: '47',
-      delta: '+5',
+      value: teknisi.length.toLocaleString('id-ID'),
+      delta: teknisiNew > 0 ? `+${teknisiNew}` : undefined,
       deltaCaption: 'teknisi baru bulan ini',
+      subtitle: 'total teknisi terdaftar',
       iconPaths: [
         'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
       ],
     },
     {
       title: 'Total Router',
-      value: routerTotal.toLocaleString('id-ID'),
-      delta: routerNewThisMonth > 0 ? `+${routerNewThisMonth}` : undefined,
+      value: servers.length.toLocaleString('id-ID'),
+      delta: routerNew > 0 ? `+${routerNew}` : undefined,
       deltaCaption: 'router baru bulan ini',
       subtitle: 'total router terdaftar',
       iconPaths: [

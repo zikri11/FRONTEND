@@ -329,9 +329,9 @@ export function Dashboard() {
                   <TabsList>
                     <TabsTrigger value='overview'>Overview</TabsTrigger>
                     <TabsTrigger value='analytics'>
-                      {isOwner ? 'Monitoring' : 'Analytics'}
+                      {!isSuperAdmin ? 'Monitoring' : 'Analytics'}
                     </TabsTrigger>
-                    {!isOwner && (
+                    {isSuperAdmin && (
                       <>
                         <TabsTrigger value='reports' disabled>
                           Reports
@@ -628,7 +628,7 @@ export function Dashboard() {
                   )}
                 </TabsContent>
                 <TabsContent value='analytics' className='space-y-4'>
-                  {isOwner ? <OutletStatusOverview /> : <Analytics />}
+                  {!isSuperAdmin ? <OutletStatusOverview /> : <Analytics />}
                 </TabsContent>
               </Tabs>
             </div>

@@ -153,3 +153,30 @@ export const superAdminNavGroups: SidebarData['navGroups'] = [
     items: [{ title: 'AI Assistant', url: '/chats', icon: Bot }],
   },
 ]
+
+// Sidebar khusus OWNER — grup terstruktur.
+export const ownerNavGroups: SidebarData['navGroups'] = [
+  {
+    title: 'Overview',
+    items: [{ title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    title: 'Operasional',
+    items: [
+      { title: 'Transaksi POS', url: '/pos-transactions', icon: ReceiptText },
+      { title: 'Langganan', url: '/billing', icon: CreditCard },
+    ],
+  },
+  {
+    title: 'Management',
+    items: [{ title: 'Teknisi', url: '/technicians', icon: Users }],
+  },
+  {
+    title: 'Tools',
+    items: [{ title: 'AI Assistant', url: '/chats', icon: Bot }],
+  },
+  {
+    title: 'History',
+    items: [{ title: 'Riwayat Aktivitas', url: '/activity', icon: History }],
+  },
+]

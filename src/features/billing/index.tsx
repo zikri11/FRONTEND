@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { KeyRound, Router, Users } from 'lucide-react'
+import { api } from '@/lib/axios'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,21 +29,19 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 
-// Dummy — nanti diganti GET /billing/me (plan aktif + kuota router) dan endpoint
-// list PaymentTransaction per owner. Kuota teknisi & API key belum ada di backend.
-const CURRENT_PLAN = {
-  name: 'Standard',
-  price: 'Rp 149.000',
-  period: '/bulan',
-  activeUntil: '14 Agu 2026',
+// GET /billing/me: paket aktif + kuota router = REAL. Harga masih dummy (tak
+// dikembalikan /billing/me — ada di /billing/plans). Kuota Teknisi & API Key
+// dummy (belum ada di /billing/me). Riwayat invoice dummy (belum ada endpoint).
+type BillingStatus = {
+  plan: { code: string; name: string }
+  maxRouters: number
+  used: number
+  remaining: number
+  expiredAt: string | null
+  expired: boolean
 }
 
-const USAGE = [
-  // 3 kondisi contoh: normal (<=85%), hampir penuh (>85% → oren), penuh (100% → merah)
-  { label: 'Router', used: 18, limit: 25, unit: 'router', icon: Router },
-  { label: 'Teknisi', used: 9, limit: 10, unit: 'teknisi', icon: Users },
-  { label: 'API Key', used: 15, limit: 15, unit: 'API key', icon: KeyRound },
-]
+const CURRENT_PLAN_PRICE = { price: 'Rp 149.000', period: '/bulan' }
 
 // >85% = warning (hampir penuh), 100% = destructive (kuota habis)
 function progressStateClass(pct: number): string {
@@ -85,6 +85,35 @@ const DUMMY_INVOICES: Invoice[] = [
 export function BillingPage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
+  const { data: billing } = useQuery({
+    queryKey: ['billing-me'],
+    queryFn: ({ signal }) =>
+      api.get('/billing/me', { signal }).then((r) => r.data as BillingStatus),
+  })
+
+  const planName = billing?.plan.name ?? '—'
+  const isExpired = billing?.expired ?? false
+  const activeUntil = billing?.expiredAt
+    ? new Date(billing.expiredAt).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null
+
+  const usage = [
+    {
+      label: 'Router',
+      used: billing?.used ?? 0,
+      limit: billing?.maxRouters ?? 0,
+      unit: 'router',
+      icon: Router,
+    },
+    // Dummy — kuota Teknisi & API Key belum dikembalikan GET /billing/me.
+    { label: 'Teknisi', used: 9, limit: 10, unit: 'teknisi', icon: Users },
+    { label: 'API Key', used: 15, limit: 15, unit: 'API key', icon: KeyRound },
+  ]
+
   return (
     <>
       <Header fixed>
@@ -110,23 +139,31 @@ export function BillingPage() {
                 <p className='text-xs text-muted-foreground'>Paket saat ini</p>
                 <div className='mt-1 flex items-center gap-2'>
                   <span className='text-2xl font-semibold tracking-tight'>
-                    {CURRENT_PLAN.name}
+                    {planName}
                   </span>
-                  <Badge variant='success-light' size='sm'>
-                    Aktif
-                  </Badge>
+                  {isExpired ? (
+                    <Badge variant='destructive-light' size='sm'>
+                      Kadaluarsa
+                    </Badge>
+                  ) : (
+                    <Badge variant='success-light' size='sm'>
+                      Aktif
+                    </Badge>
+                  )}
                 </div>
                 <p className='mt-1 text-xs text-muted-foreground'>
-                  Berlaku sampai {CURRENT_PLAN.activeUntil}
+                  {activeUntil
+                    ? `Berlaku sampai ${activeUntil}`
+                    : 'Tanpa batas waktu'}
                 </p>
               </div>
               <div className='flex items-center gap-4'>
                 <div>
                   <span className='text-2xl font-semibold tracking-tight tabular-nums'>
-                    {CURRENT_PLAN.price}
+                    {CURRENT_PLAN_PRICE.price}
                   </span>
                   <span className='text-sm text-muted-foreground'>
-                    {CURRENT_PLAN.period}
+                    {CURRENT_PLAN_PRICE.period}
                   </span>
                 </div>
                 <Button onClick={() => setUpgradeOpen(true)}>Upgrade</Button>
@@ -138,11 +175,16 @@ export function BillingPage() {
           <Card className={nestedCardClass}>
             <CardHeader>
               <CardTitle>Pemakaian Periode Ini</CardTitle>
-              <CardDescription>Kuota terpakai dari paket Standard.</CardDescription>
+              <CardDescription>
+                Kuota terpakai dari paket {planName}.
+              </CardDescription>
             </CardHeader>
             <CardContent className='grid gap-6 sm:grid-cols-3'>
-              {USAGE.map((item) => {
-                const pct = Math.round((item.used / item.limit) * 100)
+              {usage.map((item) => {
+                const pct =
+                  item.limit > 0
+                    ? Math.round((item.used / item.limit) * 100)
+                    : 0
                 return (
                   <div key={item.label}>
                     <div className='flex items-center justify-between'>

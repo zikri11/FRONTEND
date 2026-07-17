@@ -178,6 +178,17 @@ export function Dashboard() {
     refetchInterval: 3000,
   })
 
+  // Total transaksi POS (owner) — ter-scope Owner oleh backend, tak perlu
+  // serverId. Hitung semua status; meta.total dari take=1.
+  const { data: posTransactionsTotal = 0 } = useQuery({
+    queryKey: ['dashboard-pos-transactions-count'],
+    queryFn: ({ signal }) =>
+      api
+        .get('/pos/transactions', { params: { take: 1 }, signal })
+        .then((r) => r.data?.meta?.total || 0),
+    enabled: isOwner,
+  })
+
   // REST fallback non-owner — polled every 3s (against the backend, not the
   // router directly). queryFn never throws, so failures show as
   // isDisconnected. No-op kalau WS sedang 'live'. OWNER tidak pernah memanggil
@@ -424,28 +435,11 @@ export function Dashboard() {
                         </CardHeader>
                         <CardContent>
                           <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-                            6
+                            {posTransactionsTotal}
                           </div>
-                          <div className='mt-1 flex items-center gap-1.5'>
-                            <Badge variant='success-light' size='sm'>
-                              <svg
-                                xmlns='http://www.w3.org/2000/svg'
-                                viewBox='0 0 24 24'
-                                fill='none'
-                                stroke='currentColor'
-                                strokeLinecap='round'
-                                strokeLinejoin='round'
-                                strokeWidth='2'
-                              >
-                                <path d='M16 7h6v6' />
-                                <path d='m22 7-8.5 8.5-5-5L2 17' />
-                              </svg>
-                              +40
-                            </Badge>
-                            <span className='text-xs text-muted-foreground'>
-                              lebih banyak dari minggu kemarin
-                            </span>
-                          </div>
+                          <p className='mt-1 text-xs text-muted-foreground'>
+                            total transaksi POS
+                          </p>
                         </CardContent>
                       </Card>
                       </Link>

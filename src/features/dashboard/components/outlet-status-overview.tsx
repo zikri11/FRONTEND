@@ -23,6 +23,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { POS_OUTLETS } from '@/features/pos-transactions/data/dummy-transactions'
+import { useServerStore } from '@/stores/server-store'
+import { normalizeStatus } from '@/features/routers/utils'
 
 // Status uptime 30 hari per outlet — dummy sampai backend punya histori status
 // router (monitoring backend saat ini realtime-only, lihat ARSITEKTUR §10).
@@ -101,7 +103,6 @@ function formatMinutes(total: number): string {
   return `${h} jam ${m} menit`
 }
 
-const onlineCount = OUTLETS.filter((o) => o.status === 'online').length
 const avgAvailability = (
   OUTLETS.reduce((sum, o) => sum + parseFloat(o.availability), 0) /
   OUTLETS.length
@@ -112,6 +113,15 @@ const totalDowntime = OUTLETS.reduce(
 )
 
 export function OutletStatusOverview() {
+  // Kartu "Outlet Online" pakai data nyata GET /servers (lastStatus di-update
+  // backend monitoring, ter-scope owner). Kartu & tabel lain tetap dummy sampai
+  // backend punya endpoint histori 30 hari.
+  const { servers } = useServerStore()
+  const realTotal = servers.length
+  const realOnline = servers.filter(
+    (s) => normalizeStatus(s.lastStatus) === 'ONLINE'
+  ).length
+
   return (
     <div className='space-y-4'>
       {/* Ringkasan */}
@@ -137,7 +147,7 @@ export function OutletStatusOverview() {
           </CardHeader>
           <CardContent>
             <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-              {onlineCount}/{OUTLETS.length}
+              {realOnline}/{realTotal}
             </div>
             <p className='text-xs text-muted-foreground'>
               outlet aktif saat ini

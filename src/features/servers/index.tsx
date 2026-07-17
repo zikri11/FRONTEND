@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   Server,
+  ServerOff,
   MoreHorizontalIcon,
   ShieldCheck,
   ShieldAlert,
@@ -33,6 +34,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -163,8 +165,16 @@ export function Servers() {
                 </TableRow>
               ) : servers.length === 0 ? (
                 <TableRow className='hover:bg-transparent'>
-                  <TableCell colSpan={4} className='h-24 text-center text-sm text-muted-foreground'>
-                    Belum ada router yang terdaftar.
+                  <TableCell
+                    colSpan={4}
+                    className='py-12 text-center text-sm text-muted-foreground'
+                  >
+                    <div className='flex flex-col items-center gap-3'>
+                      <IconStack aria-hidden='true'>
+                        <ServerOff className='size-5' />
+                      </IconStack>
+                      <span>Belum ada router yang terdaftar.</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

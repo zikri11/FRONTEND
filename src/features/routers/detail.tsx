@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { AxiosError } from 'axios'
 import {
   keepPreviousData,
@@ -142,9 +142,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function RouterDetail({ routerId }: { routerId: string }) {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const setActiveServerId = useServerStore((s) => s.setActiveServerId)
   const { servers, isLoading, fetchServers } = useServerStore()
   const ownersMap = useOwnersMap()
 
@@ -238,6 +236,87 @@ export function RouterDetail({ routerId }: { routerId: string }) {
       return
     }
     createProfileMutation.mutate(newProfile)
+  }
+
+  // Buat Voucher — remote ke router ini (POST /vouchers/single | /batch)
+  const emptySingle = {
+    profileId: '',
+    outletName: '',
+    username: '',
+    password: '',
+  }
+  const [isSingleOpen, setIsSingleOpen] = useState(false)
+  const [singleForm, setSingleForm] = useState(emptySingle)
+
+  const emptyBatch = {
+    profileId: '',
+    count: 10,
+    usernamePrefix: '',
+    charLength: 6,
+    charFormat: 'UPPERCASE',
+    outletName: '',
+  }
+  const [isBatchOpen, setIsBatchOpen] = useState(false)
+  const [batchForm, setBatchForm] = useState(emptyBatch)
+
+  const createSingleMutation = useMutation({
+    mutationFn: (body: typeof emptySingle) =>
+      api.post('/vouchers/single', {
+        serverId: routerId,
+        profileId: body.profileId,
+        outletName: body.outletName || undefined,
+        username: body.username || undefined,
+        password: body.password || undefined,
+      }),
+    onSuccess: () => {
+      toast.success('Voucher berhasil dibuat & disinkronkan ke router')
+      setIsSingleOpen(false)
+      setSingleForm(emptySingle)
+      invalidateVouchers()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal membuat voucher')),
+  })
+
+  const createBatchMutation = useMutation({
+    mutationFn: (body: typeof emptyBatch) =>
+      api.post('/vouchers/batch', {
+        serverId: routerId,
+        profileId: body.profileId,
+        count: body.count,
+        usernamePrefix: body.usernamePrefix || undefined,
+        charLength: body.charLength,
+        charFormat: body.charFormat,
+        outletName: body.outletName || undefined,
+      }),
+    onSuccess: (_data, body) => {
+      toast.success(
+        `Batch ${body.count} voucher sedang diproses di background. Muat ulang sebentar lagi.`
+      )
+      setIsBatchOpen(false)
+      setBatchForm(emptyBatch)
+      invalidateVouchers()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal membuat batch voucher')),
+  })
+
+  const submitSingle = () => {
+    if (!singleForm.profileId) {
+      toast.error('Pilih paket dulu')
+      return
+    }
+    createSingleMutation.mutate(singleForm)
+  }
+
+  const submitBatch = () => {
+    if (!batchForm.profileId) {
+      toast.error('Pilih paket dulu')
+      return
+    }
+    if (batchForm.count < 1 || batchForm.count > 200) {
+      toast.error('Jumlah voucher 1–200')
+      return
+    }
+    createBatchMutation.mutate(batchForm)
   }
 
   // Integrasi POS — data nyata GET /pos-keys?serverId= (backend mendukung
@@ -495,14 +574,6 @@ export function RouterDetail({ routerId }: { routerId: string }) {
 
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
   // buat voucher/profil existing (teknisi) yang membaca activeServerId dari store.
-  const goCreate = (
-    to: '/vouchers/add-single' | '/vouchers/add-bulk'
-  ) => {
-    if (!router) return
-    setActiveServerId(router.id)
-    navigate({ to })
-  }
-
   return (
     <>
       <Header fixed>
@@ -908,7 +979,10 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                           <Button
                             variant='ghost'
                             className='h-auto w-full flex-col items-start justify-start gap-1.5 p-2.5 font-normal'
-                            onClick={() => goCreate('/vouchers/add-single')}
+                            onClick={() => {
+                              setSingleForm(emptySingle)
+                              setIsSingleOpen(true)
+                            }}
                           >
                             <span className='text-sm leading-none font-medium'>
                               Tunggal
@@ -920,7 +994,10 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                           <Button
                             variant='ghost'
                             className='h-auto w-full flex-col items-start justify-start gap-1.5 p-2.5 font-normal'
-                            onClick={() => goCreate('/vouchers/add-bulk')}
+                            onClick={() => {
+                              setBatchForm(emptyBatch)
+                              setIsBatchOpen(true)
+                            }}
                           >
                             <span className='text-sm leading-none font-medium'>
                               Masal
@@ -1337,6 +1414,238 @@ export function RouterDetail({ routerId }: { routerId: string }) {
           </div>
           <DialogFooter>
             <Button onClick={() => setRevealedKey(null)}>Selesai & Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog buat voucher tunggal — remote ke router ini */}
+      <Dialog open={isSingleOpen} onOpenChange={setIsSingleOpen}>
+        <DialogContent className='sm:max-w-[440px]'>
+          <DialogHeader>
+            <DialogTitle>Buat Voucher Tunggal</DialogTitle>
+            <DialogDescription>
+              Voucher dibuat langsung di router{' '}
+              <strong>{router?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor='sv-profile'>
+                Paket <span className='text-destructive'>*</span>
+              </FieldLabel>
+              <Select
+                value={singleForm.profileId}
+                onValueChange={(v) =>
+                  setSingleForm({ ...singleForm, profileId: v })
+                }
+              >
+                <SelectTrigger id='sv-profile' className='w-full'>
+                  <SelectValue placeholder='Pilih paket' />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {profiles.length === 0 && (
+                <FieldDescription>
+                  Belum ada paket. Buat Profil dulu.
+                </FieldDescription>
+              )}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor='sv-outlet'>Outlet</FieldLabel>
+              <Input
+                id='sv-outlet'
+                placeholder='Kafe Utama'
+                value={singleForm.outletName}
+                onChange={(e) =>
+                  setSingleForm({ ...singleForm, outletName: e.target.value })
+                }
+              />
+            </Field>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <Field>
+                <FieldLabel htmlFor='sv-user'>Username</FieldLabel>
+                <Input
+                  id='sv-user'
+                  className='font-mono'
+                  placeholder='auto'
+                  value={singleForm.username}
+                  onChange={(e) =>
+                    setSingleForm({ ...singleForm, username: e.target.value })
+                  }
+                />
+                <FieldDescription>Kosong = auto 6 digit.</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='sv-pass'>Password</FieldLabel>
+                <Input
+                  id='sv-pass'
+                  className='font-mono'
+                  placeholder='= username'
+                  value={singleForm.password}
+                  onChange={(e) =>
+                    setSingleForm({ ...singleForm, password: e.target.value })
+                  }
+                />
+              </Field>
+            </div>
+          </FieldGroup>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsSingleOpen(false)}
+              disabled={createSingleMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={submitSingle}
+              disabled={
+                createSingleMutation.isPending || profiles.length === 0
+              }
+            >
+              {createSingleMutation.isPending ? 'Membuat...' : 'Buat Voucher'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog buat voucher masal — remote ke router ini */}
+      <Dialog open={isBatchOpen} onOpenChange={setIsBatchOpen}>
+        <DialogContent className='sm:max-w-[480px]'>
+          <DialogHeader>
+            <DialogTitle>Buat Voucher Masal</DialogTitle>
+            <DialogDescription>
+              Generate banyak voucher di router{' '}
+              <strong>{router?.name}</strong>. Diproses di background.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <Field>
+                <FieldLabel htmlFor='bv-profile'>
+                  Paket <span className='text-destructive'>*</span>
+                </FieldLabel>
+                <Select
+                  value={batchForm.profileId}
+                  onValueChange={(v) =>
+                    setBatchForm({ ...batchForm, profileId: v })
+                  }
+                >
+                  <SelectTrigger id='bv-profile' className='w-full'>
+                    <SelectValue placeholder='Pilih paket' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='bv-count'>
+                  Jumlah <span className='text-destructive'>*</span>
+                </FieldLabel>
+                <Input
+                  id='bv-count'
+                  type='number'
+                  min={1}
+                  max={200}
+                  className='tabular-nums'
+                  value={batchForm.count}
+                  onChange={(e) =>
+                    setBatchForm({ ...batchForm, count: Number(e.target.value) })
+                  }
+                />
+                <FieldDescription>1–200 per batch.</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='bv-prefix'>Prefix Username</FieldLabel>
+                <Input
+                  id='bv-prefix'
+                  className='font-mono'
+                  placeholder='KAFE-'
+                  value={batchForm.usernamePrefix}
+                  onChange={(e) =>
+                    setBatchForm({
+                      ...batchForm,
+                      usernamePrefix: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='bv-len'>Panjang Karakter</FieldLabel>
+                <Input
+                  id='bv-len'
+                  type='number'
+                  min={4}
+                  max={10}
+                  className='tabular-nums'
+                  value={batchForm.charLength}
+                  onChange={(e) =>
+                    setBatchForm({
+                      ...batchForm,
+                      charLength: Number(e.target.value),
+                    })
+                  }
+                />
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel htmlFor='bv-format'>Format Karakter</FieldLabel>
+              <Select
+                value={batchForm.charFormat}
+                onValueChange={(v) =>
+                  setBatchForm({ ...batchForm, charFormat: v })
+                }
+              >
+                <SelectTrigger id='bv-format' className='w-full'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='UPPERCASE'>Huruf Besar (A-Z)</SelectItem>
+                  <SelectItem value='LOWERCASE'>Huruf Kecil (a-z)</SelectItem>
+                  <SelectItem value='MIXED_CASE'>Huruf Campur</SelectItem>
+                  <SelectItem value='LETTERS_ONLY'>Huruf Saja</SelectItem>
+                  <SelectItem value='NUMBERS_ONLY'>Angka Saja</SelectItem>
+                  <SelectItem value='ALPHANUMERIC'>Huruf + Angka</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor='bv-outlet'>Outlet</FieldLabel>
+              <Input
+                id='bv-outlet'
+                placeholder='Kafe Utama'
+                value={batchForm.outletName}
+                onChange={(e) =>
+                  setBatchForm({ ...batchForm, outletName: e.target.value })
+                }
+              />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsBatchOpen(false)}
+              disabled={createBatchMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={submitBatch}
+              disabled={createBatchMutation.isPending || profiles.length === 0}
+            >
+              {createBatchMutation.isPending ? 'Memproses...' : 'Generate'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

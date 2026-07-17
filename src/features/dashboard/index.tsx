@@ -136,6 +136,18 @@ async function fetchDashboardMetrics(
 export function Dashboard() {
   const { activeServerId, isLoading, servers } = useServerStore()
   const activeServer = servers.find((s) => s.id === activeServerId)
+
+  // Total outlet (owner) = jumlah router miliknya dari GET /servers (ter-scope
+  // backend). "baru bulan ini" dihitung dari createdAt tiap server.
+  const totalOutlets = servers.length
+  const nowDate = new Date()
+  const newOutletsThisMonth = servers.filter((s) => {
+    const created = new Date(s.createdAt)
+    return (
+      created.getFullYear() === nowDate.getFullYear() &&
+      created.getMonth() === nowDate.getMonth()
+    )
+  }).length
   const queryClient = useQueryClient()
   const [isRetrying, setIsRetrying] = useState(false)
 
@@ -387,28 +399,34 @@ export function Dashboard() {
                         </CardHeader>
                         <CardContent>
                           <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-                            3
+                            {totalOutlets}
                           </div>
-                          <div className='mt-1 flex items-center gap-1.5'>
-                            <Badge variant='success-light' size='sm'>
-                              <svg
-                                xmlns='http://www.w3.org/2000/svg'
-                                viewBox='0 0 24 24'
-                                fill='none'
-                                stroke='currentColor'
-                                strokeLinecap='round'
-                                strokeLinejoin='round'
-                                strokeWidth='2'
-                              >
-                                <path d='M16 7h6v6' />
-                                <path d='m22 7-8.5 8.5-5-5L2 17' />
-                              </svg>
-                              +1
-                            </Badge>
-                            <span className='text-xs text-muted-foreground'>
-                              outlet baru bulan ini
-                            </span>
-                          </div>
+                          {newOutletsThisMonth > 0 ? (
+                            <div className='mt-1 flex items-center gap-1.5'>
+                              <Badge variant='success-light' size='sm'>
+                                <svg
+                                  xmlns='http://www.w3.org/2000/svg'
+                                  viewBox='0 0 24 24'
+                                  fill='none'
+                                  stroke='currentColor'
+                                  strokeLinecap='round'
+                                  strokeLinejoin='round'
+                                  strokeWidth='2'
+                                >
+                                  <path d='M16 7h6v6' />
+                                  <path d='m22 7-8.5 8.5-5-5L2 17' />
+                                </svg>
+                                +{newOutletsThisMonth}
+                              </Badge>
+                              <span className='text-xs text-muted-foreground'>
+                                outlet baru bulan ini
+                              </span>
+                            </div>
+                          ) : (
+                            <p className='mt-1 text-xs text-muted-foreground'>
+                              total outlet terdaftar
+                            </p>
+                          )}
                         </CardContent>
                       </Card>
                     )}

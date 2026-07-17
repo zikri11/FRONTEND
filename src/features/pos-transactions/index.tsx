@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react'
+import { api } from '@/lib/axios'
+import { formatDateTimeId } from '@/lib/format-datetime'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -25,17 +29,47 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import {
-  DUMMY_POS_TRANSACTIONS,
-  POS_OUTLETS,
-} from './data/dummy-transactions'
 
 const PAGE_SIZES = [10, 25, 50, 100]
+
+type PosTxStatus = 'SUCCESS' | 'FAILED'
+
+type PosTransactionRow = {
+  id: string
+  transactionId: string
+  customerName: string | null
+  outletName: string | null
+  status: PosTxStatus
+  createdAt: string
+  server: { id: string; name: string } | null
+  profile: { id: string; name: string } | null
+  voucher: { id: string; username: string; status: string } | null
+}
+
+type PosTxResponse = {
+  data: PosTransactionRow[]
+  meta: { total: number; skip: number; take: number }
+}
+
+type ServerLite = { id: string; name: string }
+
+function TxStatusBadge({ status }: { status: PosTxStatus }) {
+  return status === 'SUCCESS' ? (
+    <Badge size='sm' variant='success-light'>
+      Sukses
+    </Badge>
+  ) : (
+    <Badge size='sm' variant='destructive-light'>
+      Gagal
+    </Badge>
+  )
+}
 
 export function PosTransactionsHistory() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [outletFilter, setOutletFilter] = useState('all')
+  const [serverFilter, setServerFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | PosTxStatus>('all')
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -48,29 +82,37 @@ export function PosTransactionsHistory() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const filtered = useMemo(() => {
-    let rows = DUMMY_POS_TRANSACTIONS
-    if (outletFilter !== 'all') {
-      rows = rows.filter((t) => t.outletName === outletFilter)
-    }
-    const q = debouncedSearch.trim().toLowerCase()
-    if (q) {
-      rows = rows.filter(
-        (t) =>
-          t.transactionId.toLowerCase().includes(q) ||
-          t.customerName.toLowerCase().includes(q) ||
-          t.outletName.toLowerCase().includes(q)
-      )
-    }
-    // Sumber data sudah urut terbaru → terlama cukup dibalik
-    return sortOrder === 'oldest' ? [...rows].reverse() : rows
-  }, [outletFilter, debouncedSearch, sortOrder])
+  // Daftar router milik owner untuk dropdown filter (scope ditangani backend).
+  const { data: servers } = useQuery({
+    queryKey: ['servers-list'],
+    queryFn: async () => (await api.get('/servers')).data as ServerLite[],
+    staleTime: 60_000,
+  })
 
-  const totalPages = Math.ceil(filtered.length / pageSize)
-  const safePage = Math.min(currentPage, Math.max(1, totalPages))
-  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1
-  const rangeEnd = Math.min(safePage * pageSize, filtered.length)
+  const skip = (currentPage - 1) * pageSize
+
+  const { data, isLoading, isError, isFetching } = useQuery({
+    queryKey: [
+      'pos-transactions',
+      { skip, take: pageSize, serverFilter, statusFilter, debouncedSearch },
+    ],
+    queryFn: async () => {
+      const params: Record<string, string | number> = { skip, take: pageSize }
+      if (serverFilter !== 'all') params.serverId = serverFilter
+      if (statusFilter !== 'all') params.status = statusFilter
+      const q = debouncedSearch.trim()
+      if (q) params.search = q
+      const res = await api.get('/pos/transactions', { params })
+      return res.data as PosTxResponse
+    },
+    placeholderData: keepPreviousData,
+  })
+
+  const rows = data?.data ?? []
+  const total = data?.meta.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const rangeStart = total === 0 ? 0 : skip + 1
+  const rangeEnd = Math.min(skip + pageSize, total)
 
   return (
     <>
@@ -88,7 +130,7 @@ export function PosTransactionsHistory() {
               Riwayat Transaksi POS
             </h2>
             <p className='mt-1 text-sm text-muted-foreground'>
-              Seluruh transaksi voucher dari sistem POS di semua outlet.
+              Riwayat transaksi voucher dari sistem POS pada seluruh router Anda.
             </p>
           </div>
 
@@ -104,39 +146,56 @@ export function PosTransactionsHistory() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className='flex w-full gap-2 sm:w-auto'>
+            <div className='flex w-full flex-wrap gap-2 sm:w-auto'>
               <Select
-                value={outletFilter}
+                value={serverFilter}
                 onValueChange={(v) => {
-                  setOutletFilter(v)
+                  setServerFilter(v)
                   setCurrentPage(1)
                 }}
               >
                 <SelectTrigger className='w-full sm:w-[180px]'>
-                  <SelectValue placeholder='Filter Outlet' />
+                  <SelectValue placeholder='Filter Router' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='all'>Semua Outlet</SelectItem>
-                  {POS_OUTLETS.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
+                  <SelectItem value='all'>Semua Router</SelectItem>
+                  {(servers ?? []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select
-                value={sortOrder}
+                value={statusFilter}
                 onValueChange={(v) => {
-                  setSortOrder(v as 'newest' | 'oldest')
+                  setStatusFilter(v as 'all' | PosTxStatus)
                   setCurrentPage(1)
                 }}
               >
-                <SelectTrigger className='w-full sm:w-[140px]'>
+                <SelectTrigger className='w-full sm:w-[150px]'>
+                  <SelectValue placeholder='Status' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>Semua Status</SelectItem>
+                  <SelectItem value='SUCCESS'>Sukses</SelectItem>
+                  <SelectItem value='FAILED'>Gagal</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={sortOrder}
+                onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}
+              >
+                <SelectTrigger className='w-full sm:w-[190px]'>
                   <SelectValue placeholder='Urutkan' />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='newest'>Terbaru</SelectItem>
-                  <SelectItem value='oldest'>Terlama</SelectItem>
+                  {/* Backend belum dukung sort naik (orderBy createdAt desc
+                      hardcoded). Aktifkan saat param ?order= tersedia. */}
+                  <SelectItem value='oldest' disabled>
+                    Terlama (menunggu backend)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -146,7 +205,13 @@ export function PosTransactionsHistory() {
           <Card className={`${nestedCardClass} py-0`}>
             <CardContent className='px-0'>
               <div className='overflow-x-auto'>
-                <Table>
+                <Table
+                  className={
+                    isFetching && !isLoading
+                      ? 'opacity-60 transition-opacity'
+                      : undefined
+                  }
+                >
                   <TableHeader>
                     <TableRow className='hover:bg-transparent'>
                       <TableHead className='ps-4 text-xs font-medium tracking-wide text-muted-foreground'>
@@ -158,35 +223,71 @@ export function PosTransactionsHistory() {
                       <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                         Outlet
                       </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Paket
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Voucher
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Status
+                      </TableHead>
                       <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
                         Waktu
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pageRows.length === 0 ? (
+                    {isLoading ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
-                          colSpan={4}
+                          colSpan={7}
                           className='h-24 text-center text-sm text-muted-foreground'
                         >
-                          Tidak ada transaksi yang cocok.
+                          Memuat transaksi…
+                        </TableCell>
+                      </TableRow>
+                    ) : isError ? (
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell
+                          colSpan={7}
+                          className='h-24 text-center text-sm text-destructive'
+                        >
+                          Gagal memuat transaksi. Coba muat ulang halaman.
+                        </TableCell>
+                      </TableRow>
+                    ) : rows.length === 0 ? (
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell
+                          colSpan={7}
+                          className='h-24 text-center text-sm text-muted-foreground'
+                        >
+                          Belum ada transaksi POS.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pageRows.map((trx) => (
-                        <TableRow key={trx.transactionId}>
+                      rows.map((trx) => (
+                        <TableRow key={trx.id}>
                           <TableCell className='ps-4 font-mono text-xs text-muted-foreground whitespace-nowrap'>
                             {trx.transactionId}
                           </TableCell>
                           <TableCell className='text-sm text-foreground whitespace-nowrap'>
-                            {trx.customerName}
+                            {trx.customerName ?? '—'}
                           </TableCell>
                           <TableCell className='text-sm text-muted-foreground whitespace-nowrap'>
-                            {trx.outletName}
+                            {trx.outletName ?? trx.server?.name ?? '—'}
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground whitespace-nowrap'>
+                            {trx.profile?.name ?? '—'}
+                          </TableCell>
+                          <TableCell className='font-mono text-xs text-muted-foreground whitespace-nowrap'>
+                            {trx.voucher?.username ?? '—'}
+                          </TableCell>
+                          <TableCell className='whitespace-nowrap'>
+                            <TxStatusBadge status={trx.status} />
                           </TableCell>
                           <TableCell className='pe-4 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
-                            {trx.createdAt}
+                            {formatDateTimeId(trx.createdAt)}
                           </TableCell>
                         </TableRow>
                       ))
@@ -198,8 +299,7 @@ export function PosTransactionsHistory() {
               {/* Footer paginasi */}
               <div className='flex flex-col items-center justify-between gap-3 border-t px-4 py-3 sm:flex-row'>
                 <div className='text-sm text-muted-foreground tabular-nums'>
-                  Menampilkan {rangeStart}–{rangeEnd} dari {filtered.length}{' '}
-                  transaksi
+                  Menampilkan {rangeStart}–{rangeEnd} dari {total} transaksi
                 </div>
                 <div className='flex items-center gap-4'>
                   <div className='flex items-center space-x-2 text-sm text-muted-foreground'>
@@ -228,22 +328,22 @@ export function PosTransactionsHistory() {
                     <Button
                       variant='outline'
                       size='sm'
-                      onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
-                      disabled={safePage <= 1}
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage <= 1}
                     >
                       <ChevronLeft className='h-4 w-4' />
                       <span className='sr-only'>Previous</span>
                     </Button>
                     <div className='px-2 text-sm font-medium tabular-nums'>
-                      Hal {safePage} dari {totalPages || 1}
+                      Hal {currentPage} dari {totalPages}
                     </div>
                     <Button
                       variant='outline'
                       size='sm'
                       onClick={() =>
-                        setCurrentPage(Math.min(totalPages, safePage + 1))
+                        setCurrentPage(Math.min(totalPages, currentPage + 1))
                       }
-                      disabled={safePage >= totalPages || totalPages === 0}
+                      disabled={currentPage >= totalPages}
                     >
                       <ChevronRight className='h-4 w-4' />
                       <span className='sr-only'>Next</span>

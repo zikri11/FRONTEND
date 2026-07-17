@@ -154,29 +154,26 @@ export const superAdminNavGroups: SidebarData['navGroups'] = [
   },
 ]
 
-// Sidebar khusus OWNER — grup terstruktur.
+// Sidebar khusus OWNER — grup terstruktur. Grup terakhir tanpa judul
+// (dipisah garis) berisi item mandiri.
 export const ownerNavGroups: SidebarData['navGroups'] = [
   {
     title: 'Overview',
     items: [{ title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard }],
   },
   {
-    title: 'Operasional',
+    title: 'Menu',
     items: [
       { title: 'Transaksi POS', url: '/pos-transactions', icon: ReceiptText },
       { title: 'Langganan', url: '/billing', icon: CreditCard },
+      { title: 'Teknisi', url: '/technicians', icon: Users },
     ],
   },
   {
-    title: 'Management',
-    items: [{ title: 'Teknisi', url: '/technicians', icon: Users }],
-  },
-  {
-    title: 'Tools',
-    items: [{ title: 'AI Assistant', url: '/chats', icon: Bot }],
-  },
-  {
-    title: 'History',
-    items: [{ title: 'Riwayat Aktivitas', url: '/activity', icon: History }],
+    title: '',
+    items: [
+      { title: 'AI Assistant', url: '/chats', icon: Bot },
+      { title: 'Riwayat Aktivitas', url: '/activity', icon: History },
+    ],
   },
 ]

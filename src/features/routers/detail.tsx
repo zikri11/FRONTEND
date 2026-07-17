@@ -79,6 +79,12 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { DetailRow, ProtocolBadge, StatusBadge } from './components'
 import { Label } from '@/components/ui/label'
 import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -187,6 +193,52 @@ export function RouterDetail({ routerId }: { routerId: string }) {
     onError: (e) => toast.error(apiErrorMessage(e, 'Gagal menghapus profil')),
     onSettled: () => setProfileToDelete(null),
   })
+
+  // Buat Profil — remote ke router ini (POST /profiles {serverId}), dialog inline
+  const emptyNewProfile = {
+    name: '',
+    rateLimit: '',
+    sharedUsers: 1,
+    validity: '',
+    sessionTimeout: '',
+    idleTimeout: '',
+    description: '',
+  }
+  const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false)
+  const [newProfile, setNewProfile] = useState(emptyNewProfile)
+
+  const createProfileMutation = useMutation({
+    mutationFn: (body: typeof emptyNewProfile) =>
+      api.post('/profiles', {
+        serverId: routerId,
+        name: body.name,
+        rateLimit: body.rateLimit,
+        sharedUsers: body.sharedUsers,
+        validity: body.validity || undefined,
+        sessionTimeout: body.sessionTimeout || undefined,
+        idleTimeout: body.idleTimeout || undefined,
+        description: body.description || undefined,
+      }),
+    onSuccess: () => {
+      toast.success('Profil berhasil dibuat & disinkronkan ke router')
+      setIsCreateProfileOpen(false)
+      setNewProfile(emptyNewProfile)
+      invalidateProfiles()
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'Gagal membuat profil')),
+  })
+
+  const submitCreateProfile = () => {
+    if (!newProfile.name.trim()) {
+      toast.error('Nama profil wajib diisi')
+      return
+    }
+    if (!newProfile.rateLimit.trim()) {
+      toast.error('Bandwidth (rate limit) wajib diisi')
+      return
+    }
+    createProfileMutation.mutate(newProfile)
+  }
 
   // Integrasi POS — data nyata GET /pos-keys?serverId= (backend mendukung
   // filter server-side + scope SA global; lihat pos-keys.service).
@@ -444,7 +496,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   // Ikatan "akses remote": set router aktif = router ini, lalu buka halaman
   // buat voucher/profil existing (teknisi) yang membaca activeServerId dari store.
   const goCreate = (
-    to: '/vouchers/add-single' | '/vouchers/add-bulk' | '/profiles/add'
+    to: '/vouchers/add-single' | '/vouchers/add-bulk'
   ) => {
     if (!router) return
     setActiveServerId(router.id)
@@ -680,7 +732,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                       Paket bandwidth/durasi yang terdaftar di router ini.
                     </CardDescription>
                   </div>
-                  <Button onClick={() => goCreate('/profiles/add')}>
+                  <Button onClick={() => setIsCreateProfileOpen(true)}>
                     Buat Profil
                   </Button>
                 </CardHeader>
@@ -1289,7 +1341,141 @@ export function RouterDetail({ routerId }: { routerId: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog edit profil (dummy) */}
+      {/* Dialog buat profil — remote ke router ini */}
+      <Dialog
+        open={isCreateProfileOpen}
+        onOpenChange={setIsCreateProfileOpen}
+      >
+        <DialogContent className='sm:max-w-[480px]'>
+          <DialogHeader>
+            <DialogTitle>Buat Profil Hotspot</DialogTitle>
+            <DialogDescription>
+              Profil dibuat langsung di router{' '}
+              <strong>{router?.name}</strong> dan disimpan ke database.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor='np-name'>
+                Nama Profil <span className='text-destructive'>*</span>
+              </FieldLabel>
+              <Input
+                id='np-name'
+                placeholder='Paket_1_Jam'
+                value={newProfile.name}
+                onChange={(e) =>
+                  setNewProfile({ ...newProfile, name: e.target.value })
+                }
+              />
+              <FieldDescription>
+                Tanpa spasi — gunakan underscore (konvensi MikroTik).
+              </FieldDescription>
+            </Field>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <Field>
+                <FieldLabel htmlFor='np-rate'>
+                  Bandwidth <span className='text-destructive'>*</span>
+                </FieldLabel>
+                <Input
+                  id='np-rate'
+                  className='font-mono'
+                  placeholder='2M/2M'
+                  value={newProfile.rateLimit}
+                  onChange={(e) =>
+                    setNewProfile({ ...newProfile, rateLimit: e.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='np-shared'>Shared Users</FieldLabel>
+                <Input
+                  id='np-shared'
+                  type='number'
+                  min={1}
+                  className='tabular-nums'
+                  value={newProfile.sharedUsers}
+                  onChange={(e) =>
+                    setNewProfile({
+                      ...newProfile,
+                      sharedUsers: Number(e.target.value),
+                    })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='np-validity'>Masa Aktif</FieldLabel>
+                <Input
+                  id='np-validity'
+                  className='font-mono'
+                  placeholder='1d'
+                  value={newProfile.validity}
+                  onChange={(e) =>
+                    setNewProfile({ ...newProfile, validity: e.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='np-session'>Session Timeout</FieldLabel>
+                <Input
+                  id='np-session'
+                  className='font-mono'
+                  placeholder='1h'
+                  value={newProfile.sessionTimeout}
+                  onChange={(e) =>
+                    setNewProfile({
+                      ...newProfile,
+                      sessionTimeout: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor='np-idle'>Idle Timeout</FieldLabel>
+                <Input
+                  id='np-idle'
+                  className='font-mono'
+                  placeholder='10m'
+                  value={newProfile.idleTimeout}
+                  onChange={(e) =>
+                    setNewProfile({
+                      ...newProfile,
+                      idleTimeout: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel htmlFor='np-desc'>Deskripsi</FieldLabel>
+              <Input
+                id='np-desc'
+                placeholder='Voucher 1 Jam WiFi Kafe'
+                value={newProfile.description}
+                onChange={(e) =>
+                  setNewProfile({ ...newProfile, description: e.target.value })
+                }
+              />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsCreateProfileOpen(false)}
+              disabled={createProfileMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={submitCreateProfile}
+              disabled={createProfileMutation.isPending}
+            >
+              {createProfileMutation.isPending ? 'Membuat...' : 'Buat Profil'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog edit profil */}
       <Dialog
         open={!!profileToEdit}
         onOpenChange={(open) => !open && setProfileToEdit(null)}

@@ -132,3 +132,24 @@ export const sidebarData: SidebarData = {
     },
   ],
 }
+
+// Sidebar khusus SUPER_ADMIN — grup terstruktur (Overview / Management / Tools)
+// dengan label item ringkas.
+export const superAdminNavGroups: SidebarData['navGroups'] = [
+  {
+    title: 'Overview',
+    items: [{ title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    title: 'Management',
+    items: [
+      { title: 'User', url: '/users', icon: Users },
+      { title: 'Router', url: '/routers', icon: Router },
+      { title: 'Paket Langganan', url: '/plans', icon: Layers },
+    ],
+  },
+  {
+    title: 'Tools',
+    items: [{ title: 'AI Assistant', url: '/chats', icon: Bot }],
+  },
+]

@@ -7,7 +7,7 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 // import { AppTitle } from './app-title'
-import { sidebarData } from './data/sidebar-data'
+import { sidebarData, superAdminNavGroups } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { TeamSwitcher } from './team-switcher'
@@ -37,7 +37,11 @@ export function AppSidebar() {
         )}
       </SidebarHeader>
       <SidebarContent>
-        {sidebarData.navGroups.map((group) => {
+        {user?.role === 'SUPER_ADMIN'
+          ? superAdminNavGroups.map((group) => (
+              <NavGroup key={group.title} {...group} />
+            ))
+          : sidebarData.navGroups.map((group) => {
           const filteredItems = group.items.filter((item) => {
             if (user?.role === 'TEKNISI' && item.title === 'Kelola Teknisi') {
               return false

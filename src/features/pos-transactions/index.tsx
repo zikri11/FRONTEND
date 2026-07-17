@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ReceiptText, SearchIcon } from 'lucide-react'
 import { api } from '@/lib/axios'
 import { formatDateTimeId } from '@/lib/format-datetime'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -260,9 +261,14 @@ export function PosTransactionsHistory() {
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={7}
-                          className='h-24 text-center text-sm text-muted-foreground'
+                          className='py-12 text-center text-sm text-muted-foreground'
                         >
-                          Belum ada transaksi POS.
+                          <div className='flex flex-col items-center gap-3'>
+                            <IconStack aria-hidden='true'>
+                              <ReceiptText className='size-5' />
+                            </IconStack>
+                            <span>Belum ada transaksi POS.</span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (

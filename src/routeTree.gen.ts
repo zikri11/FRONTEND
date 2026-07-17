@@ -29,23 +29,33 @@ import { Route as AuthenticatedTechniciansIndexRouteImport } from './routes/_aut
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedServersIndexRouteImport } from './routes/_authenticated/servers/index'
+import { Route as AuthenticatedRoutersIndexRouteImport } from './routes/_authenticated/routers/index'
 import { Route as AuthenticatedProfilesIndexRouteImport } from './routes/_authenticated/profiles/index'
+import { Route as AuthenticatedPosTransactionsIndexRouteImport } from './routes/_authenticated/pos-transactions/index'
+import { Route as AuthenticatedPlansIndexRouteImport } from './routes/_authenticated/plans/index'
+import { Route as AuthenticatedMonitoringIndexRouteImport } from './routes/_authenticated/monitoring/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
+import { Route as AuthenticatedBillingIndexRouteImport } from './routes/_authenticated/billing/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as AuthenticatedActivityIndexRouteImport } from './routes/_authenticated/activity/index'
+import { Route as AuthenticatedActiveUsersIndexRouteImport } from './routes/_authenticated/active-users/index'
 import { Route as AuthenticatedVouchersAddSingleRouteImport } from './routes/_authenticated/vouchers/add-single'
 import { Route as AuthenticatedVouchersAddBulkRouteImport } from './routes/_authenticated/vouchers/add-bulk'
+import { Route as AuthenticatedUsersIdRouteImport } from './routes/_authenticated/users/$id'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedServersAddRouteImport } from './routes/_authenticated/servers/add'
+import { Route as AuthenticatedRoutersIdRouteImport } from './routes/_authenticated/routers/$id'
 import { Route as AuthenticatedProfilesAddRouteImport } from './routes/_authenticated/profiles/add'
+import { Route as AuthenticatedPlansAddRouteImport } from './routes/_authenticated/plans/add'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedDeveloperKeysIndexRouteImport } from './routes/_authenticated/developer/keys/index'
 import { Route as AuthenticatedDeveloperDocsIndexRouteImport } from './routes/_authenticated/developer/docs/index'
 import { Route as AuthenticatedServersEditIdRouteImport } from './routes/_authenticated/servers/edit.$id'
+import { Route as AuthenticatedPlansEditIdRouteImport } from './routes/_authenticated/plans/edit.$id'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -151,10 +161,33 @@ const AuthenticatedServersIndexRoute =
     path: '/servers/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRoutersIndexRoute =
+  AuthenticatedRoutersIndexRouteImport.update({
+    id: '/routers/',
+    path: '/routers/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProfilesIndexRoute =
   AuthenticatedProfilesIndexRouteImport.update({
     id: '/profiles/',
     path: '/profiles/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPosTransactionsIndexRoute =
+  AuthenticatedPosTransactionsIndexRouteImport.update({
+    id: '/pos-transactions/',
+    path: '/pos-transactions/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlansIndexRoute = AuthenticatedPlansIndexRouteImport.update({
+  id: '/plans/',
+  path: '/plans/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMonitoringIndexRoute =
+  AuthenticatedMonitoringIndexRouteImport.update({
+    id: '/monitoring/',
+    path: '/monitoring/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedHelpCenterIndexRoute =
@@ -168,6 +201,12 @@ const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
   path: '/chats/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBillingIndexRoute =
+  AuthenticatedBillingIndexRouteImport.update({
+    id: '/billing/',
+    path: '/billing/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
   id: '/apps/',
   path: '/apps/',
@@ -177,6 +216,12 @@ const AuthenticatedActivityIndexRoute =
   AuthenticatedActivityIndexRouteImport.update({
     id: '/activity/',
     path: '/activity/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedActiveUsersIndexRoute =
+  AuthenticatedActiveUsersIndexRouteImport.update({
+    id: '/active-users/',
+    path: '/active-users/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedVouchersAddSingleRoute =
@@ -191,6 +236,11 @@ const AuthenticatedVouchersAddBulkRoute =
     path: '/vouchers/add-bulk',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedUsersIdRoute = AuthenticatedUsersIdRouteImport.update({
+  id: '/users/$id',
+  path: '/users/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -220,12 +270,22 @@ const AuthenticatedServersAddRoute = AuthenticatedServersAddRouteImport.update({
   path: '/servers/add',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRoutersIdRoute = AuthenticatedRoutersIdRouteImport.update({
+  id: '/routers/$id',
+  path: '/routers/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfilesAddRoute =
   AuthenticatedProfilesAddRouteImport.update({
     id: '/profiles/add',
     path: '/profiles/add',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPlansAddRoute = AuthenticatedPlansAddRouteImport.update({
+  id: '/plans/add',
+  path: '/plans/add',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
@@ -250,6 +310,12 @@ const AuthenticatedServersEditIdRoute =
     path: '/servers/edit/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPlansEditIdRoute =
+  AuthenticatedPlansEditIdRouteImport.update({
+    id: '/plans/edit/$id',
+    path: '/plans/edit/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -266,25 +332,35 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/plans/add': typeof AuthenticatedPlansAddRoute
   '/profiles/add': typeof AuthenticatedProfilesAddRoute
+  '/routers/$id': typeof AuthenticatedRoutersIdRoute
   '/servers/add': typeof AuthenticatedServersAddRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/users/$id': typeof AuthenticatedUsersIdRoute
   '/vouchers/add-bulk': typeof AuthenticatedVouchersAddBulkRoute
   '/vouchers/add-single': typeof AuthenticatedVouchersAddSingleRoute
+  '/active-users/': typeof AuthenticatedActiveUsersIndexRoute
   '/activity/': typeof AuthenticatedActivityIndexRoute
   '/apps/': typeof AuthenticatedAppsIndexRoute
+  '/billing/': typeof AuthenticatedBillingIndexRoute
   '/chats/': typeof AuthenticatedChatsIndexRoute
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/monitoring/': typeof AuthenticatedMonitoringIndexRoute
+  '/plans/': typeof AuthenticatedPlansIndexRoute
+  '/pos-transactions/': typeof AuthenticatedPosTransactionsIndexRoute
   '/profiles/': typeof AuthenticatedProfilesIndexRoute
+  '/routers/': typeof AuthenticatedRoutersIndexRoute
   '/servers/': typeof AuthenticatedServersIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/technicians/': typeof AuthenticatedTechniciansIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/vouchers/': typeof AuthenticatedVouchersIndexRoute
+  '/plans/edit/$id': typeof AuthenticatedPlansEditIdRoute
   '/servers/edit/$id': typeof AuthenticatedServersEditIdRoute
   '/developer/docs/': typeof AuthenticatedDeveloperDocsIndexRoute
   '/developer/keys/': typeof AuthenticatedDeveloperKeysIndexRoute
@@ -303,25 +379,35 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/plans/add': typeof AuthenticatedPlansAddRoute
   '/profiles/add': typeof AuthenticatedProfilesAddRoute
+  '/routers/$id': typeof AuthenticatedRoutersIdRoute
   '/servers/add': typeof AuthenticatedServersAddRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/users/$id': typeof AuthenticatedUsersIdRoute
   '/vouchers/add-bulk': typeof AuthenticatedVouchersAddBulkRoute
   '/vouchers/add-single': typeof AuthenticatedVouchersAddSingleRoute
+  '/active-users': typeof AuthenticatedActiveUsersIndexRoute
   '/activity': typeof AuthenticatedActivityIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
+  '/billing': typeof AuthenticatedBillingIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/monitoring': typeof AuthenticatedMonitoringIndexRoute
+  '/plans': typeof AuthenticatedPlansIndexRoute
+  '/pos-transactions': typeof AuthenticatedPosTransactionsIndexRoute
   '/profiles': typeof AuthenticatedProfilesIndexRoute
+  '/routers': typeof AuthenticatedRoutersIndexRoute
   '/servers': typeof AuthenticatedServersIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/technicians': typeof AuthenticatedTechniciansIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/vouchers': typeof AuthenticatedVouchersIndexRoute
+  '/plans/edit/$id': typeof AuthenticatedPlansEditIdRoute
   '/servers/edit/$id': typeof AuthenticatedServersEditIdRoute
   '/developer/docs': typeof AuthenticatedDeveloperDocsIndexRoute
   '/developer/keys': typeof AuthenticatedDeveloperKeysIndexRoute
@@ -343,25 +429,35 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/plans/add': typeof AuthenticatedPlansAddRoute
   '/_authenticated/profiles/add': typeof AuthenticatedProfilesAddRoute
+  '/_authenticated/routers/$id': typeof AuthenticatedRoutersIdRoute
   '/_authenticated/servers/add': typeof AuthenticatedServersAddRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/users/$id': typeof AuthenticatedUsersIdRoute
   '/_authenticated/vouchers/add-bulk': typeof AuthenticatedVouchersAddBulkRoute
   '/_authenticated/vouchers/add-single': typeof AuthenticatedVouchersAddSingleRoute
+  '/_authenticated/active-users/': typeof AuthenticatedActiveUsersIndexRoute
   '/_authenticated/activity/': typeof AuthenticatedActivityIndexRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
+  '/_authenticated/billing/': typeof AuthenticatedBillingIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/_authenticated/monitoring/': typeof AuthenticatedMonitoringIndexRoute
+  '/_authenticated/plans/': typeof AuthenticatedPlansIndexRoute
+  '/_authenticated/pos-transactions/': typeof AuthenticatedPosTransactionsIndexRoute
   '/_authenticated/profiles/': typeof AuthenticatedProfilesIndexRoute
+  '/_authenticated/routers/': typeof AuthenticatedRoutersIndexRoute
   '/_authenticated/servers/': typeof AuthenticatedServersIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/technicians/': typeof AuthenticatedTechniciansIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/vouchers/': typeof AuthenticatedVouchersIndexRoute
+  '/_authenticated/plans/edit/$id': typeof AuthenticatedPlansEditIdRoute
   '/_authenticated/servers/edit/$id': typeof AuthenticatedServersEditIdRoute
   '/_authenticated/developer/docs/': typeof AuthenticatedDeveloperDocsIndexRoute
   '/_authenticated/developer/keys/': typeof AuthenticatedDeveloperKeysIndexRoute
@@ -383,25 +479,35 @@ export interface FileRouteTypes {
     | '/503'
     | '/dashboard'
     | '/errors/$error'
+    | '/plans/add'
     | '/profiles/add'
+    | '/routers/$id'
     | '/servers/add'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/users/$id'
     | '/vouchers/add-bulk'
     | '/vouchers/add-single'
+    | '/active-users/'
     | '/activity/'
     | '/apps/'
+    | '/billing/'
     | '/chats/'
     | '/help-center/'
+    | '/monitoring/'
+    | '/plans/'
+    | '/pos-transactions/'
     | '/profiles/'
+    | '/routers/'
     | '/servers/'
     | '/settings/'
     | '/tasks/'
     | '/technicians/'
     | '/users/'
     | '/vouchers/'
+    | '/plans/edit/$id'
     | '/servers/edit/$id'
     | '/developer/docs/'
     | '/developer/keys/'
@@ -420,25 +526,35 @@ export interface FileRouteTypes {
     | '/503'
     | '/dashboard'
     | '/errors/$error'
+    | '/plans/add'
     | '/profiles/add'
+    | '/routers/$id'
     | '/servers/add'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/users/$id'
     | '/vouchers/add-bulk'
     | '/vouchers/add-single'
+    | '/active-users'
     | '/activity'
     | '/apps'
+    | '/billing'
     | '/chats'
     | '/help-center'
+    | '/monitoring'
+    | '/plans'
+    | '/pos-transactions'
     | '/profiles'
+    | '/routers'
     | '/servers'
     | '/settings'
     | '/tasks'
     | '/technicians'
     | '/users'
     | '/vouchers'
+    | '/plans/edit/$id'
     | '/servers/edit/$id'
     | '/developer/docs'
     | '/developer/keys'
@@ -459,25 +575,35 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/dashboard'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/plans/add'
     | '/_authenticated/profiles/add'
+    | '/_authenticated/routers/$id'
     | '/_authenticated/servers/add'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/users/$id'
     | '/_authenticated/vouchers/add-bulk'
     | '/_authenticated/vouchers/add-single'
+    | '/_authenticated/active-users/'
     | '/_authenticated/activity/'
     | '/_authenticated/apps/'
+    | '/_authenticated/billing/'
     | '/_authenticated/chats/'
     | '/_authenticated/help-center/'
+    | '/_authenticated/monitoring/'
+    | '/_authenticated/plans/'
+    | '/_authenticated/pos-transactions/'
     | '/_authenticated/profiles/'
+    | '/_authenticated/routers/'
     | '/_authenticated/servers/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/technicians/'
     | '/_authenticated/users/'
     | '/_authenticated/vouchers/'
+    | '/_authenticated/plans/edit/$id'
     | '/_authenticated/servers/edit/$id'
     | '/_authenticated/developer/docs/'
     | '/_authenticated/developer/keys/'
@@ -640,11 +766,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedServersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/routers/': {
+      id: '/_authenticated/routers/'
+      path: '/routers'
+      fullPath: '/routers/'
+      preLoaderRoute: typeof AuthenticatedRoutersIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profiles/': {
       id: '/_authenticated/profiles/'
       path: '/profiles'
       fullPath: '/profiles/'
       preLoaderRoute: typeof AuthenticatedProfilesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pos-transactions/': {
+      id: '/_authenticated/pos-transactions/'
+      path: '/pos-transactions'
+      fullPath: '/pos-transactions/'
+      preLoaderRoute: typeof AuthenticatedPosTransactionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plans/': {
+      id: '/_authenticated/plans/'
+      path: '/plans'
+      fullPath: '/plans/'
+      preLoaderRoute: typeof AuthenticatedPlansIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/monitoring/': {
+      id: '/_authenticated/monitoring/'
+      path: '/monitoring'
+      fullPath: '/monitoring/'
+      preLoaderRoute: typeof AuthenticatedMonitoringIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/help-center/': {
@@ -661,6 +815,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/billing/': {
+      id: '/_authenticated/billing/'
+      path: '/billing'
+      fullPath: '/billing/'
+      preLoaderRoute: typeof AuthenticatedBillingIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/apps/': {
       id: '/_authenticated/apps/'
       path: '/apps'
@@ -675,6 +836,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedActivityIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/active-users/': {
+      id: '/_authenticated/active-users/'
+      path: '/active-users'
+      fullPath: '/active-users/'
+      preLoaderRoute: typeof AuthenticatedActiveUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/vouchers/add-single': {
       id: '/_authenticated/vouchers/add-single'
       path: '/vouchers/add-single'
@@ -687,6 +855,13 @@ declare module '@tanstack/react-router' {
       path: '/vouchers/add-bulk'
       fullPath: '/vouchers/add-bulk'
       preLoaderRoute: typeof AuthenticatedVouchersAddBulkRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/users/$id': {
+      id: '/_authenticated/users/$id'
+      path: '/users/$id'
+      fullPath: '/users/$id'
+      preLoaderRoute: typeof AuthenticatedUsersIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings/notifications': {
@@ -724,11 +899,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedServersAddRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/routers/$id': {
+      id: '/_authenticated/routers/$id'
+      path: '/routers/$id'
+      fullPath: '/routers/$id'
+      preLoaderRoute: typeof AuthenticatedRoutersIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profiles/add': {
       id: '/_authenticated/profiles/add'
       path: '/profiles/add'
       fullPath: '/profiles/add'
       preLoaderRoute: typeof AuthenticatedProfilesAddRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plans/add': {
+      id: '/_authenticated/plans/add'
+      path: '/plans/add'
+      fullPath: '/plans/add'
+      preLoaderRoute: typeof AuthenticatedPlansAddRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/errors/$error': {
@@ -757,6 +946,13 @@ declare module '@tanstack/react-router' {
       path: '/servers/edit/$id'
       fullPath: '/servers/edit/$id'
       preLoaderRoute: typeof AuthenticatedServersEditIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plans/edit/$id': {
+      id: '/_authenticated/plans/edit/$id'
+      path: '/plans/edit/$id'
+      fullPath: '/plans/edit/$id'
+      preLoaderRoute: typeof AuthenticatedPlansEditIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -789,20 +985,30 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedPlansAddRoute: typeof AuthenticatedPlansAddRoute
   AuthenticatedProfilesAddRoute: typeof AuthenticatedProfilesAddRoute
+  AuthenticatedRoutersIdRoute: typeof AuthenticatedRoutersIdRoute
   AuthenticatedServersAddRoute: typeof AuthenticatedServersAddRoute
+  AuthenticatedUsersIdRoute: typeof AuthenticatedUsersIdRoute
   AuthenticatedVouchersAddBulkRoute: typeof AuthenticatedVouchersAddBulkRoute
   AuthenticatedVouchersAddSingleRoute: typeof AuthenticatedVouchersAddSingleRoute
+  AuthenticatedActiveUsersIndexRoute: typeof AuthenticatedActiveUsersIndexRoute
   AuthenticatedActivityIndexRoute: typeof AuthenticatedActivityIndexRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
+  AuthenticatedBillingIndexRoute: typeof AuthenticatedBillingIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
+  AuthenticatedMonitoringIndexRoute: typeof AuthenticatedMonitoringIndexRoute
+  AuthenticatedPlansIndexRoute: typeof AuthenticatedPlansIndexRoute
+  AuthenticatedPosTransactionsIndexRoute: typeof AuthenticatedPosTransactionsIndexRoute
   AuthenticatedProfilesIndexRoute: typeof AuthenticatedProfilesIndexRoute
+  AuthenticatedRoutersIndexRoute: typeof AuthenticatedRoutersIndexRoute
   AuthenticatedServersIndexRoute: typeof AuthenticatedServersIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedTechniciansIndexRoute: typeof AuthenticatedTechniciansIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
   AuthenticatedVouchersIndexRoute: typeof AuthenticatedVouchersIndexRoute
+  AuthenticatedPlansEditIdRoute: typeof AuthenticatedPlansEditIdRoute
   AuthenticatedServersEditIdRoute: typeof AuthenticatedServersEditIdRoute
   AuthenticatedDeveloperDocsIndexRoute: typeof AuthenticatedDeveloperDocsIndexRoute
   AuthenticatedDeveloperKeysIndexRoute: typeof AuthenticatedDeveloperKeysIndexRoute
@@ -812,20 +1018,31 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedPlansAddRoute: AuthenticatedPlansAddRoute,
   AuthenticatedProfilesAddRoute: AuthenticatedProfilesAddRoute,
+  AuthenticatedRoutersIdRoute: AuthenticatedRoutersIdRoute,
   AuthenticatedServersAddRoute: AuthenticatedServersAddRoute,
+  AuthenticatedUsersIdRoute: AuthenticatedUsersIdRoute,
   AuthenticatedVouchersAddBulkRoute: AuthenticatedVouchersAddBulkRoute,
   AuthenticatedVouchersAddSingleRoute: AuthenticatedVouchersAddSingleRoute,
+  AuthenticatedActiveUsersIndexRoute: AuthenticatedActiveUsersIndexRoute,
   AuthenticatedActivityIndexRoute: AuthenticatedActivityIndexRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
+  AuthenticatedBillingIndexRoute: AuthenticatedBillingIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
+  AuthenticatedMonitoringIndexRoute: AuthenticatedMonitoringIndexRoute,
+  AuthenticatedPlansIndexRoute: AuthenticatedPlansIndexRoute,
+  AuthenticatedPosTransactionsIndexRoute:
+    AuthenticatedPosTransactionsIndexRoute,
   AuthenticatedProfilesIndexRoute: AuthenticatedProfilesIndexRoute,
+  AuthenticatedRoutersIndexRoute: AuthenticatedRoutersIndexRoute,
   AuthenticatedServersIndexRoute: AuthenticatedServersIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedTechniciansIndexRoute: AuthenticatedTechniciansIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedVouchersIndexRoute: AuthenticatedVouchersIndexRoute,
+  AuthenticatedPlansEditIdRoute: AuthenticatedPlansEditIdRoute,
   AuthenticatedServersEditIdRoute: AuthenticatedServersEditIdRoute,
   AuthenticatedDeveloperDocsIndexRoute: AuthenticatedDeveloperDocsIndexRoute,
   AuthenticatedDeveloperKeysIndexRoute: AuthenticatedDeveloperKeysIndexRoute,

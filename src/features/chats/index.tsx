@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   Bot,
-  MessageCircleDashedIcon,
   Send,
   PlusIcon,
   GlobeIcon,
@@ -137,8 +136,8 @@ export function Chats() {
     }
   }, [activeSessionId])
 
-  const activeSessionTitle = activeSessionId === 'new' 
-    ? 'Percakapan Baru' 
+  const activeSessionTitle = activeSessionId === 'new'
+    ? 'Percakapan Baru'
     : (sessions.find(s => s.id === activeSessionId)?.title || 'Chat Aktif')
 
   useEffect(() => {
@@ -153,7 +152,7 @@ export function Chats() {
 
     const question = input.trim()
     const newMessage: Message = { id: Date.now().toString(), role: 'user', content: question }
-    
+
     setActiveMessages(prev => [...prev, newMessage])
     setInput('')
     setMentionState(prev => ({ ...prev, active: false }))
@@ -161,11 +160,11 @@ export function Chats() {
 
     try {
       const payload: any = { question, provider: selectedProvider }
-      
+
       if (activeSessionId && activeSessionId !== 'new') {
         payload.sessionId = activeSessionId
       }
-      
+
       // Determine serverId from mentions
       let targetServerId = activeServerId
       for (const s of servers) {
@@ -181,10 +180,10 @@ export function Chats() {
       }
 
       const res = await api.post('/ai/chat', payload)
-      
-      const replyMessage: Message = { 
-        id: (Date.now() + 1).toString(), 
-        role: 'assistant', 
+
+      const replyMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
         content: res.data.answer,
         provider: res.data.provider || selectedProvider
       }
@@ -230,7 +229,7 @@ export function Chats() {
   }
 
   const filteredServers = servers.filter(s =>
-    s.name.toLowerCase().includes(mentionState.filter.toLowerCase()) || 
+    s.name.toLowerCase().includes(mentionState.filter.toLowerCase()) ||
     s.host.toLowerCase().includes(mentionState.filter.toLowerCase())
   )
 
@@ -241,7 +240,7 @@ export function Chats() {
     const cursor = e.target.selectionStart || 0
     const textBeforeCursor = val.slice(0, cursor)
     const match = textBeforeCursor.match(/@([a-zA-Z0-9\._-]*)$/)
-    
+
     if (match) {
       setMentionState({
         active: true,
@@ -286,6 +285,89 @@ export function Chats() {
       formRef.current?.requestSubmit()
     }
   }
+
+  // Empty = belum ada pesan & tidak sedang memuat riwayat → composer pindah ke tengah.
+  const isEmpty = !isLoadingMessages && activeMessages.length === 0
+
+  // Composer dipakai di 2 posisi: tengah (empty state) & footer (saat ada chat).
+  const composerBlock = (
+    <div className="w-full max-w-3xl mx-auto">
+      <form ref={formRef} onSubmit={handleSend} className="relative flex w-full items-end gap-3 bg-muted/40 p-2 rounded-3xl border focus-within:ring-2 ring-primary/20 transition-all">
+
+        {/* Mention Autocomplete Dropdown */}
+        {mentionState.active && (
+          <div className="absolute bottom-[calc(100%+8px)] left-14 w-64 bg-background border shadow-xl rounded-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2">
+            <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b bg-muted/30">
+              Pilih Router
+            </div>
+            <div className="max-h-48 overflow-y-auto p-1">
+              {filteredServers.length === 0 ? (
+                <div className="px-3 py-4 text-center text-xs text-muted-foreground">Tidak ditemukan</div>
+              ) : (
+                filteredServers.map((s, i) => (
+                  <div
+                    key={s.id}
+                    className={`px-3 py-2.5 mb-0.5 text-sm rounded-lg cursor-pointer flex flex-col transition-colors ${i === mentionState.index ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted'}`}
+                    onClick={() => selectMention(s.name)}
+                    onMouseEnter={() => setMentionState(prev => ({ ...prev, index: i }))}
+                  >
+                    <span className="font-semibold flex items-center gap-2">
+                      <GlobeIcon className="h-3.5 w-3.5 opacity-80" />
+                      {s.name}
+                    </span>
+                    <span className={`font-mono text-[10px] mt-0.5 ${i === mentionState.index ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                      {s.host}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+          <SelectTrigger
+            aria-label="Pilih AI Provider"
+            className="shrink-0 self-center w-[160px] rounded-full data-[size=default]:h-12 px-4 [&_small]:hidden"
+          >
+            <SelectValue placeholder="Pilih AI" />
+          </SelectTrigger>
+          <SelectContent side="top">
+            {AI_PROVIDERS.map((provider) => (
+              <SelectItem key={provider.value} value={provider.value}>
+                <span className="flex flex-col items-start gap-px">
+                  <span className="text-sm font-medium">
+                    {provider.label}
+                  </span>
+                  <small className="text-xs text-muted-foreground">
+                    {provider.description}
+                  </small>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Textarea
+          ref={inputRef}
+          placeholder="Ketik pesan Anda... (@ untuk pilih router, Enter kirim)"
+          value={input}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          disabled={isSending}
+          autoComplete="off"
+          rows={1}
+          className="flex-1 min-h-[44px] max-h-40 resize-none bg-transparent border-0 focus-visible:ring-0 shadow-none text-base px-0 py-2.5"
+        />
+        <Button type="submit" size="icon" disabled={isSending || !input.trim()} className="shrink-0 rounded-full h-12 w-12 shadow-md hover:shadow-lg transition-all">
+          <Send className="h-5 w-5" />
+          <span className="sr-only">Kirim</span>
+        </Button>
+      </form>
+      <div className="text-center mt-3">
+        <span className="text-[11px] text-muted-foreground">AI dapat memberikan informasi yang tidak akurat. Selalu verifikasi konfigurasi router Anda.</span>
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -389,17 +471,19 @@ export function Chats() {
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     Memuat percakapan...
                   </div>
-                ) : activeMessages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-4">
-                    <div className="bg-primary/10 text-primary p-6 rounded-full">
-                      <MessageCircleDashedIcon className="h-12 w-12" />
+                ) : isEmpty ? (
+                  /* Empty state — logo + ajakan + composer, semua rata tengah */
+                  <div className="flex flex-col items-center justify-center h-full gap-6">
+                    <div className="bg-primary/10 text-primary p-5 rounded-full">
+                      <Bot className="h-10 w-10" />
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold tracking-tight text-foreground mb-2">Tanyakan Apapun!</h3>
+                    <div className="text-center text-muted-foreground">
+                      <h3 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Tanyakan Apapun!</h3>
                       <p className="max-w-md mx-auto">
                         Ketik <strong className="text-foreground">@</strong> untuk memilih router spesifik. AI dapat membantu memecahkan masalah koneksi, membuat script hotspot, atau menganalisis traffic jaringan Anda secara instan.
                       </p>
                     </div>
+                    {composerBlock}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-6">
@@ -470,85 +554,10 @@ export function Chats() {
               </div>
             </div>
 
-            {/* Composer — sticky di bawah card (bukan bawah layar), lebar sejajar kolom pesan */}
-            <div className="p-4 border-t shrink-0">
-              <div className="w-full max-w-3xl mx-auto">
-                <form ref={formRef} onSubmit={handleSend} className="relative flex w-full items-end gap-3 bg-muted/40 p-2 rounded-3xl border focus-within:ring-2 ring-primary/20 transition-all">
-
-                  {/* Mention Autocomplete Dropdown */}
-                  {mentionState.active && (
-                    <div className="absolute bottom-[calc(100%+8px)] left-14 w-64 bg-background border shadow-xl rounded-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2">
-                      <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b bg-muted/30">
-                        Pilih Router
-                      </div>
-                      <div className="max-h-48 overflow-y-auto p-1">
-                        {filteredServers.length === 0 ? (
-                          <div className="px-3 py-4 text-center text-xs text-muted-foreground">Tidak ditemukan</div>
-                        ) : (
-                          filteredServers.map((s, i) => (
-                            <div
-                              key={s.id}
-                              className={`px-3 py-2.5 mb-0.5 text-sm rounded-lg cursor-pointer flex flex-col transition-colors ${i === mentionState.index ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted'}`}
-                              onClick={() => selectMention(s.name)}
-                              onMouseEnter={() => setMentionState(prev => ({ ...prev, index: i }))}
-                            >
-                              <span className="font-semibold flex items-center gap-2">
-                                <GlobeIcon className="h-3.5 w-3.5 opacity-80" />
-                                {s.name}
-                              </span>
-                              <span className={`font-mono text-[10px] mt-0.5 ${i === mentionState.index ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                                {s.host}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <Select value={selectedProvider} onValueChange={setSelectedProvider}>
-                    <SelectTrigger
-                      aria-label="Pilih AI Provider"
-                      className="shrink-0 self-center w-[160px] rounded-full data-[size=default]:h-12 px-4 [&_small]:hidden"
-                    >
-                      <SelectValue placeholder="Pilih AI" />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                      {AI_PROVIDERS.map((provider) => (
-                        <SelectItem key={provider.value} value={provider.value}>
-                          <span className="flex flex-col items-start gap-px">
-                            <span className="text-sm font-medium">
-                              {provider.label}
-                            </span>
-                            <small className="text-xs text-muted-foreground">
-                              {provider.description}
-                            </small>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Textarea
-                    ref={inputRef}
-                    placeholder="Tanya dengan @router, atau ketik masalah Anda... (Enter kirim, Shift+Enter baris baru)"
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    disabled={isSending}
-                    autoComplete="off"
-                    rows={1}
-                    className="flex-1 min-h-[44px] max-h-40 resize-none bg-transparent border-0 focus-visible:ring-0 shadow-none text-base px-0 py-2.5"
-                  />
-                  <Button type="submit" size="icon" disabled={isSending || !input.trim()} className="shrink-0 rounded-full h-12 w-12 shadow-md hover:shadow-lg transition-all">
-                    <Send className="h-5 w-5" />
-                    <span className="sr-only">Kirim</span>
-                  </Button>
-                </form>
-                <div className="text-center mt-3">
-                  <span className="text-[11px] text-muted-foreground">AI dapat memberikan informasi yang tidak akurat. Selalu verifikasi konfigurasi router Anda.</span>
-                </div>
-              </div>
-            </div>
+            {/* Composer di bawah saat ada percakapan; saat kosong pindah ke tengah (empty state). */}
+            {!isEmpty && (
+              <div className="p-4 border-t shrink-0">{composerBlock}</div>
+            )}
           </div>
         </div>
       </Main>
@@ -563,7 +572,7 @@ export function Chats() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSessionToDelete(null)}>Batal</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteSession}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

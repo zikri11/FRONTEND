@@ -295,7 +295,7 @@ export function Chats() {
       <form
         ref={formRef}
         onSubmit={handleSend}
-        className="relative flex w-full flex-col gap-2 rounded-2xl border border-border bg-background p-3 shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20"
+        className="relative flex w-full items-end gap-2 rounded-2xl border border-border bg-background p-2 shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20"
       >
 
         {/* Mention Autocomplete Dropdown */}
@@ -329,6 +329,31 @@ export function Chats() {
           </div>
         )}
 
+        <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+          <SelectTrigger
+            aria-label="Pilih AI Provider"
+            className="h-9 w-fit shrink-0 self-center gap-1.5 rounded-full border-0 bg-muted/60 px-3 text-xs font-medium shadow-none hover:bg-muted [&_small]:hidden"
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${AI_PROVIDERS.find((p) => p.value === selectedProvider)?.color || 'bg-primary'}`}
+            />
+            <SelectValue placeholder="Pilih AI" />
+          </SelectTrigger>
+          <SelectContent side="top" align="start">
+            {AI_PROVIDERS.map((provider) => (
+              <SelectItem key={provider.value} value={provider.value}>
+                <span className="flex flex-col items-start gap-px">
+                  <span className="text-sm font-medium">
+                    {provider.label}
+                  </span>
+                  <small className="text-xs text-muted-foreground">
+                    {provider.description}
+                  </small>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Textarea
           ref={inputRef}
           placeholder="Ketik pesan Anda... (@ untuk pilih router, Enter kirim)"
@@ -338,47 +363,17 @@ export function Chats() {
           disabled={isSending}
           autoComplete="off"
           rows={1}
-          className="w-full min-h-[44px] max-h-40 resize-none bg-transparent border-0 focus-visible:ring-0 shadow-none text-base px-1 py-1"
+          className="flex-1 min-h-[40px] max-h-40 resize-none bg-transparent border-0 focus-visible:ring-0 shadow-none text-base px-1 py-2"
         />
-
-        {/* Baris kontrol: chip model (kiri) + kirim (kanan) */}
-        <div className="flex items-center justify-between gap-2">
-          <Select value={selectedProvider} onValueChange={setSelectedProvider}>
-            <SelectTrigger
-              aria-label="Pilih AI Provider"
-              className="h-8 w-fit gap-1.5 rounded-full border-0 bg-muted/60 px-3 text-xs font-medium shadow-none hover:bg-muted [&_small]:hidden"
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${AI_PROVIDERS.find((p) => p.value === selectedProvider)?.color || 'bg-primary'}`}
-              />
-              <SelectValue placeholder="Pilih AI" />
-            </SelectTrigger>
-            <SelectContent side="top" align="start">
-              {AI_PROVIDERS.map((provider) => (
-                <SelectItem key={provider.value} value={provider.value}>
-                  <span className="flex flex-col items-start gap-px">
-                    <span className="text-sm font-medium">
-                      {provider.label}
-                    </span>
-                    <small className="text-xs text-muted-foreground">
-                      {provider.description}
-                    </small>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button
-            type="submit"
-            size="icon"
-            disabled={isSending || !input.trim()}
-            className="h-9 w-9 shrink-0 rounded-full shadow-sm hover:shadow-md transition-all"
-          >
-            <Send className="h-4 w-4" />
-            <span className="sr-only">Kirim</span>
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          size="icon"
+          disabled={isSending || !input.trim()}
+          className="h-9 w-9 shrink-0 self-center rounded-full shadow-sm hover:shadow-md transition-all"
+        >
+          <Send className="h-4 w-4" />
+          <span className="sr-only">Kirim</span>
+        </Button>
       </form>
       <div className="text-center mt-3">
         <span className="text-[11px] text-muted-foreground">AI dapat memberikan informasi yang tidak akurat. Selalu verifikasi konfigurasi router Anda.</span>

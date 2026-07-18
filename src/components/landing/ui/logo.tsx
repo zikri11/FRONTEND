@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-const logo = "/images/logo.svg";
+const logo = "/images/egnet-favicon.svg";
 
 export default function Logo() {
   return (

@@ -16,7 +16,7 @@ export function EmptyRouterPlaceholder() {
         </p>
       </div>
       <Link to="/servers">
-        <Button size="sm" className="mt-2">
+        <Button size="sm" className="mt-2 text-xs">
           Tambah Router Sekarang
         </Button>
       </Link>

@@ -23,6 +23,8 @@ import { api } from '@/lib/axios'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { useServerStore } from '@/stores/server-store'
 import { Badge } from '@/components/reui/badge'
+import { DetailSkeleton } from '@/components/skeletons/detail-skeleton'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -603,11 +605,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
         </div>
         <div className={`${outerBoxClass} flex-1`}>
           {isLoading && !router ? (
-            <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
-              <p className='text-sm text-muted-foreground'>
-                Memuat data router...
-              </p>
-            </div>
+            <DetailSkeleton />
           ) : !router ? (
             <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
               <h2 className='mb-2 text-xl font-semibold'>
@@ -1127,14 +1125,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
                       </TableHeader>
                       <TableBody>
                         {vouchersPending ? (
-                          <TableRow className='hover:bg-transparent'>
-                            <TableCell
-                              colSpan={7}
-                              className='h-24 text-center text-sm text-muted-foreground'
-                            >
-                              Memuat voucher...
-                            </TableCell>
-                          </TableRow>
+                          <TableSkeleton rows={5} cols={7} />
                         ) : vouchersError ? (
                           <TableRow className='hover:bg-transparent'>
                             <TableCell

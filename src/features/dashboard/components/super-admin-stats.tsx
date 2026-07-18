@@ -5,6 +5,7 @@ import { nestedCardClass } from '@/lib/nested-box'
 import { useServerStore } from '@/stores/server-store'
 import { Badge } from '@/components/reui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { StatCardsSkeleton } from '@/components/skeletons/stat-cards-skeleton'
 
 // Statistik platform SUPER_ADMIN — semua kartu pakai data nyata global:
 // User (owner) & Teknisi dari GET /users?role=, Router dari GET /servers,
@@ -34,7 +35,7 @@ export function SuperAdminStats() {
     )
   }
 
-  const { data: owners = [] } = useQuery({
+  const { data: owners = [], isPending: ownersPending } = useQuery({
     queryKey: ['sa-users', 'OWNER'],
     queryFn: ({ signal }) =>
       api
@@ -43,7 +44,7 @@ export function SuperAdminStats() {
     staleTime: 60_000,
   })
 
-  const { data: teknisi = [] } = useQuery({
+  const { data: teknisi = [], isPending: teknisiPending } = useQuery({
     queryKey: ['sa-users', 'TEKNISI'],
     queryFn: ({ signal }) =>
       api
@@ -52,13 +53,18 @@ export function SuperAdminStats() {
     staleTime: 60_000,
   })
 
-  const { data: posTotal = 0 } = useQuery({
+  const { data: posTotal = 0, isPending: posPending } = useQuery({
     queryKey: ['sa-pos-total'],
     queryFn: ({ signal }) =>
       api
         .get('/pos/transactions', { params: { take: 1 }, signal })
         .then((r) => r.data?.meta?.total ?? 0),
   })
+
+  // Skeleton saat data agregat pertama kali dimuat (cache-hit → tak muncul lagi).
+  if (ownersPending || teknisiPending || posPending) {
+    return <StatCardsSkeleton count={4} />
+  }
 
   const ownerNew = owners.filter((u) => createdThisMonth(u.createdAt)).length
   const teknisiNew = teknisi.filter((u) => createdThisMonth(u.createdAt)).length

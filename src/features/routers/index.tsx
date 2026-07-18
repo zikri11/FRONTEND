@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import {
   Dialog,
   DialogContent,
@@ -253,15 +254,8 @@ export function KelolaRouter() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? (
-                      <TableRow className='hover:bg-transparent'>
-                        <TableCell
-                          colSpan={6}
-                          className='h-24 text-center text-sm text-muted-foreground'
-                        >
-                          Memuat data router...
-                        </TableCell>
-                      </TableRow>
+                    {isLoading && servers.length === 0 ? (
+                      <TableSkeleton rows={8} cols={6} />
                     ) : error ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell colSpan={6} className='h-24 text-center'>

@@ -15,8 +15,13 @@ import {
 import { SignOutDialog } from '@/components/sign-out-dialog'
 
 import { useAuthStore } from '@/stores/auth-store'
+import { cn } from '@/lib/utils'
 
-export function ProfileDropdown() {
+export function ProfileDropdown({
+  contentClassName,
+}: {
+  contentClassName?: string
+} = {}) {
   const [open, setOpen] = useDialogState()
   const { user } = useAuthStore((state) => state.auth)
 
@@ -33,7 +38,11 @@ export function ProfileDropdown() {
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className='w-56' align='end' forceMount>
+        <DropdownMenuContent
+          className={cn('w-56', contentClassName)}
+          align='end'
+          forceMount
+        >
           <DropdownMenuLabel className='font-normal'>
             <div className='flex flex-col gap-1.5'>
               <p className='text-sm leading-none font-medium'>{user?.name || 'Guest'}</p>

@@ -48,7 +48,7 @@ export const BackgroundBeams = React.memo(({ className }: BackgroundBeamsProps) 
       >
         <g opacity="0.03">
           {pathData.map((d, i) => (
-            <path key={`static-${i}`} d={d} stroke="white" strokeWidth="0.5" />
+            <path key={`static-${i}`} d={d} stroke="#94a3b8" strokeWidth="0.5" />
           ))}
         </g>
         {pathData.map((d, i) => (
@@ -61,7 +61,7 @@ export const BackgroundBeams = React.memo(({ className }: BackgroundBeamsProps) 
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{
               pathLength: [0, 1],
-              opacity: [0, 0.6, 0.6, 0],
+              opacity: [0, 0.3, 0.3, 0],
             }}
             transition={{
               duration: animations[i].duration,

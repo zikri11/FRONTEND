@@ -12,14 +12,14 @@ export default function HeroHome() {
           {/* Section header */}
           <div className="pb-12 text-center md:pb-20">
             <h1
-              className="animate-[gradient_6s_linear_infinite] bg-[linear-gradient(to_right,var(--color-gray-200),var(--color-indigo-200),var(--color-gray-50),var(--color-indigo-300),var(--color-gray-200))] bg-[length:200%_auto] bg-clip-text pb-5 font-nacelle text-4xl font-semibold text-transparent md:text-5xl"
+              className="animate-[gradient_6s_linear_infinite] bg-[linear-gradient(to_right,var(--color-gray-900),var(--color-indigo-600),var(--color-gray-700),var(--color-indigo-500),var(--color-gray-900))] bg-[length:200%_auto] bg-clip-text pb-5 font-nacelle text-4xl font-semibold text-transparent md:text-5xl"
               data-aos="fade-up"
             >
               Satu Dashboard untuk Semua Outlet Anda
             </h1>
             <div className="mx-auto max-w-3xl">
               <p
-                className="mb-8 text-xl text-indigo-200/65"
+                className="mb-8 text-xl text-gray-600"
                 data-aos="fade-up"
                 data-aos-delay={200}
               >
@@ -41,8 +41,8 @@ export default function HeroHome() {
                 </div>
                 <div data-aos="fade-up" data-aos-delay={600}>
                   <a
-                    className="btn relative w-full bg-linear-to-b from-gray-800 to-gray-800/60 bg-[length:100%_100%] bg-[bottom] text-gray-300 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:border before:border-transparent before:[background:linear-gradient(to_right,var(--color-gray-800),var(--color-gray-700),var(--color-gray-800))_border-box] before:mask-border hover:bg-[length:100%_150%] sm:ml-4 sm:w-auto"
-                    href="#0"
+                    className="btn relative w-full bg-linear-to-b from-gray-100 to-gray-200 bg-[length:100%_100%] bg-[bottom] text-gray-600 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:border before:border-transparent before:[background:linear-gradient(to_right,var(--color-gray-200),var(--color-gray-300),var(--color-gray-200))_border-box] before:mask-border hover:bg-[length:100%_150%] sm:ml-4 sm:w-auto"
+                    href="#features"
                   >
                     <span className="relative z-10">Pelajari Fitur</span>
                   </a>
@@ -52,7 +52,7 @@ export default function HeroHome() {
 
             {/* AI Brands */}
             <div className="pt-16 pb-8 text-center" data-aos="fade-up" data-aos-delay={800}>
-              <p className="text-sm font-medium text-gray-400 mb-8 uppercase tracking-wider">Terintegrasi dengan Teknologi Terbaik</p>
+              <p className="text-sm font-medium text-gray-500 mb-8 uppercase tracking-wider">Terintegrasi dengan Teknologi Terbaik</p>
               
               {/* Main Custom Logo */}
               <div className="flex justify-center mb-10">
@@ -63,25 +63,25 @@ export default function HeroHome() {
                 <img 
                   src="/images/main-logo.png" 
                   alt="Main Brand Logo" 
-                  className="h-16 md:h-20 w-auto brightness-0 invert opacity-80 transition-opacity hover:opacity-100" 
+                  className="h-16 md:h-20 w-auto brightness-0 opacity-80 transition-opacity hover:opacity-100" 
                 />
               </div>
 
               {/* Other AI Logos */}
               <div className="flex flex-wrap justify-center items-center gap-10 md:gap-14 opacity-70">
-                <div className="flex items-center gap-2.5 text-white">
+                <div className="flex items-center gap-2.5 text-gray-900">
                   <TbBrandOpenai className="text-3xl" />
                   <span className="font-semibold text-xl tracking-tight">ChatGPT</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-white">
+                <div className="flex items-center gap-2.5 text-gray-900">
                   <SiAnthropic className="text-3xl" />
                   <span className="font-semibold text-xl tracking-tight">Claude</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-white">
+                <div className="flex items-center gap-2.5 text-gray-900">
                   <SiGooglegemini className="text-3xl" />
                   <span className="font-semibold text-xl tracking-tight">Gemini</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-white">
+                <div className="flex items-center gap-2.5 text-gray-900">
                   <TbBrain className="text-3xl" />
                   <span className="font-semibold text-xl tracking-tight">GLM</span>
                 </div>

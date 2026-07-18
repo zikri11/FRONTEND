@@ -23,7 +23,7 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="landing-page flex min-h-screen flex-col overflow-hidden supports-[overflow:clip]:overflow-clip bg-gray-950 font-sans text-base text-gray-200 antialiased">
+    <div className="landing-page flex min-h-screen flex-col overflow-hidden supports-[overflow:clip]:overflow-clip bg-white font-sans text-base text-gray-900 antialiased">
       <Header />
       <main className="relative flex grow flex-col">
         <PageIllustration />

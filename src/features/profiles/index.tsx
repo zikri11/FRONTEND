@@ -35,7 +35,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ConfigDrawer } from '@/components/config-drawer'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -123,7 +122,6 @@ export function Profiles() {
       <Header fixed>
         <Search className='me-auto' />
         <ThemeSwitch />
-        <ConfigDrawer />
         <ProfileDropdown />
       </Header>
 

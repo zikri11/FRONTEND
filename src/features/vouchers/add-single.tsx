@@ -24,7 +24,6 @@ import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ProfileDropdown } from '@/components/profile-dropdown'
-import { ConfigDrawer } from '@/components/config-drawer'
 import { Search } from '@/components/search'
 import { toast } from 'sonner'
 import { useServerStore } from '@/stores/server-store'
@@ -138,7 +137,6 @@ export function AddSingleVoucher() {
           <Search className='hidden sm:block' />
         </div>
         <ThemeSwitch />
-        <ConfigDrawer />
         <ProfileDropdown />
       </Header>
 

@@ -22,7 +22,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ConfigDrawer } from '@/components/config-drawer'
 import { DisconnectedRouterPlaceholder } from '@/components/disconnected-router-placeholder'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { Header } from '@/components/layout/header'
@@ -298,7 +297,6 @@ export function Dashboard() {
       <Header>
         <Search className='me-auto' />
         <ThemeSwitch />
-        <ConfigDrawer />
         <ProfileDropdown />
       </Header>
 

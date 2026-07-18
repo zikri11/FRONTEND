@@ -80,7 +80,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ConfigDrawer } from '@/components/config-drawer'
 import { EmptyRouterPlaceholder } from '@/components/empty-router-placeholder'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -296,7 +295,6 @@ export function Vouchers() {
       <Header fixed>
         <Search className='me-auto' />
         <ThemeSwitch />
-        <ConfigDrawer />
         <ProfileDropdown />
       </Header>
 

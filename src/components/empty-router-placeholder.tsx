@@ -1,4 +1,4 @@
-import { ServerOff, Plus } from 'lucide-react'
+import { ServerOff } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { IconStack } from '@/components/reui/icon-stack'
@@ -16,8 +16,7 @@ export function EmptyRouterPlaceholder() {
         </p>
       </div>
       <Link to="/servers">
-        <Button className="mt-4 gap-2">
-          <Plus className="h-4 w-4" />
+        <Button className="mt-4">
           Tambah Router Sekarang
         </Button>
       </Link>

@@ -292,7 +292,7 @@ export function Chats() {
   // Composer dipakai di 2 posisi: tengah (empty state) & footer (saat ada chat).
   const composerBlock = (
     <div className="w-full max-w-3xl mx-auto">
-      <form ref={formRef} onSubmit={handleSend} className="relative flex w-full items-end gap-3 bg-muted/40 p-2 rounded-3xl border focus-within:ring-2 ring-primary/20 transition-all">
+      <form ref={formRef} onSubmit={handleSend} className="relative flex w-full items-end gap-3">
 
         {/* Mention Autocomplete Dropdown */}
         {mentionState.active && (
@@ -556,7 +556,7 @@ export function Chats() {
 
             {/* Composer di bawah saat ada percakapan; saat kosong pindah ke tengah (empty state). */}
             {!isEmpty && (
-              <div className="p-4 border-t shrink-0">{composerBlock}</div>
+              <div className="p-4 shrink-0">{composerBlock}</div>
             )}
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/reui/badge'
 import {
@@ -173,11 +174,7 @@ export function Technicians() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow className='hover:bg-transparent'>
-                  <TableCell colSpan={5} className='h-24 text-center'>
-                    <Loader2 className='mx-auto h-6 w-6 animate-spin text-primary' />
-                  </TableCell>
-                </TableRow>
+                <TableSkeleton rows={6} cols={5} />
               ) : error ? (
                 <TableRow className='hover:bg-transparent'>
                   <TableCell colSpan={5} className='h-24 text-center text-sm text-destructive'>

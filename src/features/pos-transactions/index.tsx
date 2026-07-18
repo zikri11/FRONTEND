@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -240,14 +241,7 @@ export function PosTransactionsHistory() {
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableRow className='hover:bg-transparent'>
-                        <TableCell
-                          colSpan={7}
-                          className='h-24 text-center text-sm text-muted-foreground'
-                        >
-                          Memuat transaksi…
-                        </TableCell>
-                      </TableRow>
+                      <TableSkeleton rows={8} cols={7} />
                     ) : isError ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 
 type RecentRow = {
   id: string
@@ -60,14 +61,7 @@ export function RecentPosTransactions() {
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            <TableRow className='hover:bg-transparent'>
-              <TableCell
-                colSpan={4}
-                className='h-24 text-center text-sm text-muted-foreground'
-              >
-                Memuat transaksi…
-              </TableCell>
-            </TableRow>
+            <TableSkeleton rows={6} cols={4} />
           ) : isError ? (
             <TableRow className='hover:bg-transparent'>
               <TableCell

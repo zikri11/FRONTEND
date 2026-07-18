@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import {
   Select,
   SelectContent,
@@ -186,11 +187,7 @@ export function ActivityHistory() {
             </TableHeader>
             <TableBody>
               {isPending ? (
-                <TableRow className='hover:bg-transparent'>
-                  <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                    Memuat riwayat aktivitas...
-                  </TableCell>
-                </TableRow>
+                <TableSkeleton rows={8} cols={5} />
               ) : isError ? (
                 <TableRow className='hover:bg-transparent'>
                   <TableCell colSpan={5} className="h-24 text-center">

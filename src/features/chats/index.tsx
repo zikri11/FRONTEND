@@ -334,9 +334,6 @@ export function Chats() {
             aria-label="Pilih AI Provider"
             className="h-9 w-fit shrink-0 self-center gap-1.5 rounded-full border-0 bg-muted/60 px-3 text-xs font-medium shadow-none hover:bg-muted [&_small]:hidden"
           >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${AI_PROVIDERS.find((p) => p.value === selectedProvider)?.color || 'bg-primary'}`}
-            />
             <SelectValue placeholder="Pilih AI" />
           </SelectTrigger>
           <SelectContent side="top" align="start">

@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import {
   Dialog,
   DialogContent,
@@ -98,6 +99,9 @@ export function KelolaOwner() {
   const [planFilter, setPlanFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  // Placeholder loading — ganti dengan isPending dari useQuery saat Kelola Owner
+  // di-wire ke GET /admin/owners (data saat ini masih dummy sinkron).
+  const [isLoading, setIsLoading] = useState(true)
 
   const [ownerToDelete, setOwnerToDelete] = useState<OwnerRow | null>(null)
   const [ownerToEdit, setOwnerToEdit] = useState<OwnerRow | null>(null)
@@ -112,6 +116,11 @@ export function KelolaOwner() {
     }, 300)
     return () => clearTimeout(timer)
   }, [search])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const filtered = useMemo(() => {
     let list = rows
@@ -247,7 +256,9 @@ export function KelolaOwner() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pageRows.length === 0 ? (
+                    {isLoading ? (
+                      <TableSkeleton rows={8} cols={7} />
+                    ) : pageRows.length === 0 ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={7}

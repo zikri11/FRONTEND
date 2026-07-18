@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { MoreHorizontalIcon, PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +49,14 @@ export function KelolaPlan() {
   const navigate = useNavigate()
   const [plans, setPlans] = useState<PlanRow[]>(() => getPlans())
   const [planToDelete, setPlanToDelete] = useState<PlanRow | null>(null)
+  // Placeholder loading — ganti dengan isPending dari useQuery saat Kelola Plan
+  // di-wire ke GET /plans (data saat ini masih dummy sinkron).
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const handleDeleteConfirm = () => {
     if (!planToDelete) return
@@ -113,7 +122,9 @@ export function KelolaPlan() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {plans.length === 0 ? (
+                    {isLoading ? (
+                      <TableSkeleton rows={5} cols={7} />
+                    ) : plans.length === 0 ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={7}

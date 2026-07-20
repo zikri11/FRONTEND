@@ -1,6 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { SettingsNotifications } from '@/features/settings/notifications'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
+// Halaman Notifications (dummy, tanpa backend) dihapus → arahkan ke /settings.
 export const Route = createFileRoute('/_authenticated/settings/notifications')({
-  component: SettingsNotifications,
+  beforeLoad: () => {
+    throw redirect({ to: '/settings' })
+  },
 })

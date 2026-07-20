@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { BackgroundBeams } from "@/components/landing/ui/background-beams";
 import { SiAnthropic, SiGooglegemini } from "react-icons/si";
 import { TbBrain, TbBrandOpenai } from "react-icons/tb";
@@ -27,9 +28,9 @@ export default function HeroHome() {
               </p>
               <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center">
                 <div data-aos="fade-up" data-aos-delay={400}>
-                  <a
+                  <Link
                     className="btn group mb-4 w-full bg-linear-to-t from-indigo-600 to-indigo-500 bg-[length:100%_100%] bg-[bottom] text-white shadow-[inset_0px_1px_0px_0px_--theme(--color-white/.16)] hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                    href="#0"
+                    to="/sign-in"
                   >
                     <span className="relative inline-flex items-center">
                       Mulai Gratis Sekarang
@@ -37,7 +38,7 @@ export default function HeroHome() {
                         -&gt;
                       </span>
                     </span>
-                  </a>
+                  </Link>
                 </div>
                 <div data-aos="fade-up" data-aos-delay={600}>
                   <a

@@ -1,55 +1,83 @@
-// Penyimpanan dummy plan (module-level, hilang saat reload) — sampai backend
-// punya CRUD plan. Dipakai bersama halaman list, add, dan edit.
-export type PlanRow = {
+// Layer API Kelola Plan (SUPER_ADMIN) → backend modul `plans`.
+// GET /plans balik ARRAY polos (bukan {data,meta}) & memuat paket non-aktif.
+import { AxiosError } from 'axios'
+import { api } from '@/lib/axios'
+
+// Bentuk Plan dari backend (Prisma model Plan).
+export type Plan = {
   id: string
+  code: string
   name: string
-  maxRouters: number
-  maxTechnicians: number
-  aiAccess: boolean
-  durationDays: number
   price: number
-  period: 'Bulan' | 'Tahun'
+  durationDays: number | null
+  maxRouters: number
+  maxTeknisi: number
+  aiAccess: boolean
+  apiKeyAccess: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
 }
 
-export const EMPTY_PLAN_FORM: Omit<PlanRow, 'id'> = {
+// Payload POST/PATCH — selaras CreatePlanDto backend.
+export type PlanPayload = {
+  code: string
+  name: string
+  price: number
+  durationDays: number | null
+  maxRouters: number
+  maxTeknisi: number
+  aiAccess: boolean
+  apiKeyAccess: boolean
+  isActive: boolean
+}
+
+export const EMPTY_PLAN_FORM: PlanPayload = {
+  code: '',
   name: '',
-  maxRouters: 0,
-  maxTechnicians: 0,
-  aiAccess: false,
-  durationDays: 30,
   price: 0,
-  period: 'Bulan',
+  durationDays: 30,
+  maxRouters: 0,
+  maxTeknisi: 0,
+  aiAccess: false,
+  apiKeyAccess: false,
+  isActive: true,
 }
 
-let plans: PlanRow[] = [
-  { id: 'plan-free', name: 'Free', maxRouters: 5, maxTechnicians: 2, aiAccess: false, durationDays: 30, price: 0, period: 'Bulan' },
-  { id: 'plan-standard', name: 'Standard', maxRouters: 25, maxTechnicians: 10, aiAccess: true, durationDays: 30, price: 149000, period: 'Bulan' },
-  { id: 'plan-pro', name: 'Pro', maxRouters: 100, maxTechnicians: 50, aiAccess: true, durationDays: 30, price: 299000, period: 'Bulan' },
-]
-
-export function getPlans(): PlanRow[] {
-  return [...plans]
+export function fetchPlans(signal?: AbortSignal): Promise<Plan[]> {
+  return api.get('/plans', { signal }).then((r) => r.data as Plan[])
 }
 
-export function getPlan(id: string): PlanRow | undefined {
-  return plans.find((p) => p.id === id)
+export function fetchPlan(id: string, signal?: AbortSignal): Promise<Plan> {
+  return api.get(`/plans/${id}`, { signal }).then((r) => r.data as Plan)
 }
 
-export function upsertPlan(data: Omit<PlanRow, 'id'>, id?: string): void {
-  if (id) {
-    plans = plans.map((p) => (p.id === id ? { ...p, ...data } : p))
-  } else {
-    plans = [
-      ...plans,
-      { id: `plan-${Date.now()}-${data.name.toLowerCase()}`, ...data },
-    ]
-  }
+export function createPlan(payload: PlanPayload): Promise<Plan> {
+  return api.post('/plans', payload).then((r) => r.data as Plan)
 }
 
-export function deletePlan(id: string): void {
-  plans = plans.filter((p) => p.id !== id)
+export function updatePlan(
+  id: string,
+  payload: Partial<PlanPayload>
+): Promise<Plan> {
+  return api.patch(`/plans/${id}`, payload).then((r) => r.data as Plan)
+}
+
+// DELETE → soft-delete ({softDeleted:true, plan}) bila masih dipakai, else hard.
+export type RemovePlanResult = { softDeleted: boolean; plan?: Plan }
+
+export function removePlan(id: string): Promise<RemovePlanResult> {
+  return api.delete(`/plans/${id}`).then((r) => r.data as RemovePlanResult)
 }
 
 export function formatRupiah(n: number): string {
   return `Rp ${n.toLocaleString('id-ID')}`
+}
+
+// Pesan error backend (string | array validasi) → satu baris untuk toast.
+export function planErrorMessage(error: unknown, fallback: string): string {
+  const m =
+    error instanceof AxiosError ? error.response?.data?.message : undefined
+  if (Array.isArray(m)) return m.join(', ')
+  return typeof m === 'string' ? m : fallback
 }

@@ -3,10 +3,7 @@ import { ProfileForm } from './profile-form'
 
 export function SettingsProfile() {
   return (
-    <ContentSection
-      title='Profile'
-      desc='This is how others will see you on the site.'
-    >
+    <ContentSection title='Akun' desc='Kelola informasi akun dan kata sandi Anda.'>
       <ProfileForm />
     </ContentSection>
   )

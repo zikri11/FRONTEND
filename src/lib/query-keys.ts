@@ -11,4 +11,19 @@ export const qk = {
   vouchers: (serverId: string, params?: { skip?: number; take?: number; profileId?: string; status?: string; search?: string }) => ['vouchers', serverId, params] as const,
   activity: (serverId: string) => ['activity-log', serverId] as const,
   posKeys: ['pos-keys'] as const,
+  plans: ['plans'] as const,
+  plan: (id: string) => ['plan', id] as const,
+  owners: (params: {
+    skip?: number
+    take?: number
+    search?: string
+    planCode?: string
+  }) => ['admin-owners', params] as const,
+  owner: (id: string) => ['admin-owner', id] as const,
+  healthSummary: (serverId: string, days: number) =>
+    ['health-summary', serverId, days] as const,
+  posStats: (tag: string) => ['pos-stats', tag] as const,
+  billingInvoices: (params: { skip?: number; take?: number }) =>
+    ['billing-invoices', params] as const,
+  billingPlans: ['billing-plans'] as const,
 }

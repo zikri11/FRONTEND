@@ -1,6 +1,12 @@
 import { Link } from '@tanstack/react-router'
+import { useQueries } from '@tanstack/react-query'
 import { nestedCardClass } from '@/lib/nested-box'
+import { qk } from '@/lib/query-keys'
+import { formatDateTimeId } from '@/lib/format-datetime'
+import { availabilityLabel, fetchHealthSummary } from '@/lib/monitoring'
+import { OutletTimeline } from '@/components/monitoring/outlet-uptime'
 import { Badge } from '@/components/reui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Card,
   CardContent,
@@ -16,110 +22,36 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { POS_OUTLETS } from '@/features/pos-transactions/data/dummy-transactions'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { useServerStore } from '@/stores/server-store'
 import { normalizeStatus } from '@/features/routers/utils'
 
-// Status uptime 30 hari per outlet — dummy sampai backend punya histori status
-// router (monitoring backend saat ini realtime-only, lihat ARSITEKTUR §10).
-type OutletDay = {
-  date: string // "d MMM yyyy"
-  downtimeMinutes: number
-}
-
-type OutletUptime = {
-  name: string
-  status: 'online' | 'offline'
-  availability: string
-  lastOffline: string | null // null → belum pernah offline
-  days: OutletDay[] // 30 item, index 0 = 30 hari lalu
-}
-
-const MONTHS_ID = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'Mei',
-  'Jun',
-  'Jul',
-  'Agu',
-  'Sep',
-  'Okt',
-  'Nov',
-  'Des',
-]
-
 const DAYS = 30
-// Statis agar deterministik, konsisten dengan dummy transaksi POS
-const TODAY = new Date(2026, 6, 14)
-
-function buildDays(downtime: Record<number, number>): OutletDay[] {
-  return Array.from({ length: DAYS }, (_, i) => {
-    const d = new Date(TODAY)
-    d.setDate(d.getDate() - (DAYS - 1 - i))
-    return {
-      date: `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}`,
-      downtimeMinutes: downtime[i] ?? 0,
-    }
-  })
-}
-
-const OUTLETS: OutletUptime[] = [
-  {
-    name: POS_OUTLETS[0],
-    status: 'online',
-    availability: '99.98%',
-    lastOffline: '10 Jul 2026, 10:52 (6 menit)',
-    days: buildDays({ 15: 4, 25: 6 }),
-  },
-  {
-    name: POS_OUTLETS[1],
-    status: 'online',
-    availability: '100%',
-    lastOffline: null,
-    days: buildDays({}),
-  },
-  {
-    name: POS_OUTLETS[2],
-    status: 'offline',
-    availability: '98.64%',
-    lastOffline: 'Sedang offline',
-    days: buildDays({ 27: 45, 28: 60, 29: 91 }),
-  },
-]
-
-function formatMinutes(total: number): string {
-  const h = Math.floor(total / 60)
-  const m = total % 60
-  if (h === 0) return `${m} menit`
-  if (m === 0) return `${h} jam`
-  return `${h} jam ${m} menit`
-}
-
-const avgAvailability = (
-  OUTLETS.reduce((sum, o) => sum + parseFloat(o.availability), 0) /
-  OUTLETS.length
-).toFixed(2)
-const totalDowntime = OUTLETS.reduce(
-  (sum, o) => sum + o.days.reduce((s, d) => s + d.downtimeMinutes, 0),
-  0
-)
 
 export function OutletStatusOverview() {
-  // Kartu "Outlet Online" pakai data nyata GET /servers (lastStatus di-update
-  // backend monitoring, ter-scope owner). Kartu & tabel lain tetap dummy sampai
-  // backend punya endpoint histori 30 hari.
-  const { servers } = useServerStore()
+  const { servers, isLoading: serversLoading } = useServerStore()
+
   const realTotal = servers.length
   const realOnline = servers.filter(
     (s) => normalizeStatus(s.lastStatus) === 'ONLINE'
+  ).length
+
+  // Per-outlet summary → availability (agregat), kartu "Outlet Bermasalah",
+  // dan timeline tiap baris. Tak perlu call gabungan terpisah.
+  const outletSummaries = useQueries({
+    queries: servers.map((s) => ({
+      queryKey: qk.healthSummary(s.id, DAYS),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        fetchHealthSummary({ serverId: s.id, days: DAYS }, signal),
+    })),
+  })
+
+  const summariesLoading =
+    servers.length > 0 && outletSummaries.some((q) => q.isPending)
+  const allPoints = outletSummaries.flatMap((q) => q.data ?? [])
+  // Outlet yang punya minimal 1 cek OFFLINE dalam 30 hari.
+  const troubledCount = outletSummaries.filter((q) =>
+    (q.data ?? []).some((p) => p.fails > 0)
   ).length
 
   return (
@@ -175,10 +107,14 @@ export function OutletStatusOverview() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-              {avgAvailability}%
-            </div>
-            <p className='text-xs text-muted-foreground'>
+            {summariesLoading ? (
+              <Skeleton className='h-8 w-20' />
+            ) : (
+              <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                {availabilityLabel(allPoints)}
+              </div>
+            )}
+            <p className='mt-1 text-xs text-muted-foreground'>
               rata-rata semua outlet
             </p>
           </CardContent>
@@ -186,7 +122,7 @@ export function OutletStatusOverview() {
         <Card className={nestedCardClass}>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>
-              Total Downtime 30 Hari
+              Outlet Bermasalah
             </CardTitle>
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -198,16 +134,23 @@ export function OutletStatusOverview() {
               strokeWidth='2'
               className='h-4 w-4 text-muted-foreground'
             >
-              <circle cx='12' cy='12' r='10' />
-              <path d='M12 6v6l4 2' />
+              <path d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z' />
+              <path d='M12 9v4' />
+              <path d='M12 17h.01' />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-semibold tracking-tight tabular-nums'>
-              {formatMinutes(totalDowntime)}
-            </div>
-            <p className='text-xs text-muted-foreground'>
-              gabungan semua outlet
+            {summariesLoading ? (
+              <Skeleton className='h-8 w-16' />
+            ) : (
+              <div className='text-2xl font-semibold tracking-tight tabular-nums'>
+                {troubledCount}
+              </div>
+            )}
+            <p className='mt-1 text-xs text-muted-foreground'>
+              {troubledCount > 0
+                ? `dari ${realTotal} outlet sempat offline 30 hari terakhir`
+                : 'semua outlet stabil 30 hari terakhir'}
             </p>
           </CardContent>
         </Card>
@@ -247,69 +190,71 @@ export function OutletStatusOverview() {
                     Timeline (30 Hari)
                   </TableHead>
                   <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
-                    Terakhir Offline
+                    Terakhir Dicek
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {OUTLETS.map((outlet) => (
-                  <TableRow key={outlet.name}>
-                    <TableCell className='text-sm text-foreground whitespace-nowrap'>
-                      {outlet.name}
-                    </TableCell>
-                    <TableCell>
-                      {outlet.status === 'online' ? (
-                        <Badge
-                          size='sm'
-                          className='border-success/20 bg-success/10 text-success'
-                        >
-                          Online
-                        </Badge>
-                      ) : (
-                        <Badge
-                          size='sm'
-                          variant='secondary'
-                          className='text-muted-foreground'
-                        >
-                          Offline
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className='font-mono text-xs tabular-nums'>
-                      {outlet.availability}
-                    </TableCell>
-                    <TableCell>
-                      <TooltipProvider delayDuration={100}>
-                        <div className='flex h-6 w-full max-w-[280px] items-center justify-between gap-[2px]'>
-                          {outlet.days.map((day, idx) => (
-                            <Tooltip key={idx}>
-                              <TooltipTrigger asChild>
-                                <div
-                                  className={`h-full flex-1 cursor-pointer rounded-[2px] transition-colors hover:opacity-80 ${
-                                    day.downtimeMinutes === 0
-                                      ? 'bg-success/80'
-                                      : 'bg-destructive/80'
-                                  }`}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent side='top' className='text-xs'>
-                                <p className='font-medium'>{day.date}</p>
-                                <p className='text-muted-foreground'>
-                                  {day.downtimeMinutes === 0
-                                    ? 'Tidak ada downtime'
-                                    : `Downtime: ${formatMinutes(day.downtimeMinutes)}`}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                        </div>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
-                      {outlet.lastOffline ?? '—'}
+                {serversLoading && servers.length === 0 ? (
+                  <TableSkeleton rows={3} cols={5} />
+                ) : servers.length === 0 ? (
+                  <TableRow className='hover:bg-transparent'>
+                    <TableCell
+                      colSpan={5}
+                      className='h-24 text-center text-sm text-muted-foreground'
+                    >
+                      Belum ada outlet (router).
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  servers.map((server, i) => {
+                    const q = outletSummaries[i]
+                    const status = normalizeStatus(server.lastStatus)
+                    const online = status === 'ONLINE'
+                    return (
+                      <TableRow key={server.id}>
+                        <TableCell className='text-sm text-foreground whitespace-nowrap'>
+                          {server.name}
+                        </TableCell>
+                        <TableCell>
+                          {online ? (
+                            <Badge
+                              size='sm'
+                              className='border-success/20 bg-success/10 text-success'
+                            >
+                              Online
+                            </Badge>
+                          ) : (
+                            <Badge
+                              size='sm'
+                              variant='secondary'
+                              className='text-muted-foreground'
+                            >
+                              {status === 'OFFLINE' ? 'Offline' : 'Tidak diketahui'}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className='font-mono text-xs tabular-nums'>
+                          {availabilityLabel(q?.data)}
+                        </TableCell>
+                        <TableCell>
+                          <OutletTimeline
+                            points={q?.data}
+                            days={DAYS}
+                            isLoading={q?.isPending ?? true}
+                          />
+                        </TableCell>
+                        <TableCell className='text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
+                          {status === 'OFFLINE'
+                            ? 'Sedang offline'
+                            : server.lastCheckedAt
+                              ? formatDateTimeId(server.lastCheckedAt)
+                              : '—'}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
@@ -322,6 +267,10 @@ export function OutletStatusOverview() {
               <span className='flex items-center gap-1.5'>
                 <span className='h-2 w-2 rounded-[2px] bg-destructive/80' />
                 Ada downtime
+              </span>
+              <span className='flex items-center gap-1.5'>
+                <span className='h-2 w-2 rounded-[2px] bg-muted' />
+                Tidak ada data
               </span>
             </div>
             <span>30 hari lalu → Hari ini</span>

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MoreHorizontalIcon, PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+import { qk } from '@/lib/query-keys'
 import { Badge } from '@/components/reui/badge'
 import {
   AlertDialog,
@@ -38,32 +40,57 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import {
-  deletePlan,
+  fetchPlans,
   formatRupiah,
-  getPlans,
-  type PlanRow,
+  planErrorMessage,
+  removePlan,
+  type Plan,
 } from './data/plans-store'
+
+const COLS = 10
+
+// Badge fitur (AI / API Key): aktif = hijau, nonaktif = abu.
+function FeatureBadge({ on }: { on: boolean }) {
+  return on ? (
+    <Badge size='sm' variant='success-light'>
+      Aktif
+    </Badge>
+  ) : (
+    <Badge size='sm' variant='secondary' className='text-muted-foreground'>
+      Nonaktif
+    </Badge>
+  )
+}
 
 export function KelolaPlan() {
   const navigate = useNavigate()
-  const [plans, setPlans] = useState<PlanRow[]>(() => getPlans())
-  const [planToDelete, setPlanToDelete] = useState<PlanRow | null>(null)
-  // Placeholder loading — ganti dengan isPending dari useQuery saat Kelola Plan
-  // di-wire ke GET /plans (data saat ini masih dummy sinkron).
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const [planToDelete, setPlanToDelete] = useState<Plan | null>(null)
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500)
-    return () => clearTimeout(timer)
-  }, [])
+  const {
+    data: plans = [],
+    isPending,
+    isError,
+    refetch,
+  } = useQuery<Plan[]>({
+    queryKey: qk.plans,
+    queryFn: ({ signal }) => fetchPlans(signal),
+  })
 
-  const handleDeleteConfirm = () => {
-    if (!planToDelete) return
-    deletePlan(planToDelete.id)
-    setPlans(getPlans())
-    setPlanToDelete(null)
-    toast.success('Plan berhasil dihapus (dummy)')
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => removePlan(id),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: qk.plans })
+      toast.success(
+        result.softDeleted
+          ? 'Paket dinonaktifkan (masih dipakai langganan aktif)'
+          : 'Paket dihapus permanen'
+      )
+    },
+    onError: (error) =>
+      toast.error(planErrorMessage(error, 'Gagal menghapus paket')),
+    onSettled: () => setPlanToDelete(null),
+  })
 
   return (
     <>
@@ -97,6 +124,9 @@ export function KelolaPlan() {
                   <TableHeader>
                     <TableRow className='hover:bg-transparent'>
                       <TableHead className='ps-4 text-xs font-medium tracking-wide text-muted-foreground'>
+                        Kode
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                         Nama
                       </TableHead>
                       <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
@@ -109,10 +139,16 @@ export function KelolaPlan() {
                         AI
                       </TableHead>
                       <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        API Key
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                         Masa
                       </TableHead>
                       <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                         Harga
+                      </TableHead>
+                      <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
+                        Status
                       </TableHead>
                       <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
                         Aksi
@@ -120,85 +156,119 @@ export function KelolaPlan() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? (
-                      <TableSkeleton rows={5} cols={7} />
+                    {isPending ? (
+                      <TableSkeleton rows={5} cols={COLS} />
+                    ) : isError ? (
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell colSpan={COLS} className='h-24 text-center'>
+                          <p className='text-sm text-muted-foreground'>
+                            Gagal memuat daftar paket.
+                          </p>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className='mt-2'
+                            onClick={() => refetch()}
+                          >
+                            Coba Lagi
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ) : plans.length === 0 ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
-                          colSpan={7}
+                          colSpan={COLS}
                           className='h-24 text-center text-sm text-muted-foreground'
                         >
-                          Belum ada plan.
+                          Belum ada paket.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      plans.map((plan) => (
-                        <TableRow key={plan.id}>
-                          <TableCell className='ps-4 text-sm text-foreground whitespace-nowrap'>
-                            {plan.name}
-                          </TableCell>
-                          <TableCell className='text-right text-sm tabular-nums'>
-                            {plan.maxRouters}
-                          </TableCell>
-                          <TableCell className='text-right text-sm tabular-nums'>
-                            {plan.maxTechnicians}
-                          </TableCell>
-                          <TableCell>
-                            {plan.aiAccess ? (
-                              <Badge size='sm' variant='success-light'>
-                                Aktif
-                              </Badge>
-                            ) : (
-                              <Badge
-                                size='sm'
-                                variant='secondary'
-                                className='text-muted-foreground'
-                              >
-                                Nonaktif
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className='text-sm text-muted-foreground whitespace-nowrap'>
-                            {plan.durationDays} hari
-                          </TableCell>
-                          <TableCell className='text-right font-mono text-xs tabular-nums whitespace-nowrap'>
-                            {formatRupiah(plan.price)}
-                          </TableCell>
-                          <TableCell className='pe-4 text-right'>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant='ghost'
-                                  size='icon'
-                                  className='size-8'
+                      plans.map((plan) => {
+                        const isFree = plan.code === 'FREE'
+                        return (
+                          <TableRow
+                            key={plan.id}
+                            className={plan.isActive ? undefined : 'opacity-60'}
+                          >
+                            <TableCell className='ps-4 font-mono text-xs text-muted-foreground whitespace-nowrap'>
+                              {plan.code}
+                            </TableCell>
+                            <TableCell className='text-sm text-foreground whitespace-nowrap'>
+                              {plan.name}
+                            </TableCell>
+                            <TableCell className='text-right text-sm tabular-nums'>
+                              {plan.maxRouters}
+                            </TableCell>
+                            <TableCell className='text-right text-sm tabular-nums'>
+                              {plan.maxTeknisi}
+                            </TableCell>
+                            <TableCell>
+                              <FeatureBadge on={plan.aiAccess} />
+                            </TableCell>
+                            <TableCell>
+                              <FeatureBadge on={plan.apiKeyAccess} />
+                            </TableCell>
+                            <TableCell className='text-sm text-muted-foreground whitespace-nowrap'>
+                              {plan.durationDays
+                                ? `${plan.durationDays} hari`
+                                : 'Tanpa batas'}
+                            </TableCell>
+                            <TableCell className='text-right font-mono text-xs tabular-nums whitespace-nowrap'>
+                              {formatRupiah(plan.price)}
+                            </TableCell>
+                            <TableCell>
+                              {plan.isActive ? (
+                                <Badge size='sm' variant='success-light'>
+                                  Aktif
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  size='sm'
+                                  variant='secondary'
+                                  className='text-muted-foreground'
                                 >
-                                  <MoreHorizontalIcon />
-                                  <span className='sr-only'>Buka menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align='end'>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    navigate({
-                                      to: '/plans/edit/$id',
-                                      params: { id: plan.id },
-                                    })
-                                  }
-                                >
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  variant='destructive'
-                                  onClick={() => setPlanToDelete(plan)}
-                                >
-                                  Hapus
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                                  Nonaktif
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className='pe-4 text-right'>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    className='size-8'
+                                  >
+                                    <MoreHorizontalIcon />
+                                    <span className='sr-only'>Buka menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align='end'>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      navigate({
+                                        to: '/plans/edit/$id',
+                                        params: { id: plan.id },
+                                      })
+                                    }
+                                  >
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant='destructive'
+                                    disabled={isFree}
+                                    onClick={() => setPlanToDelete(plan)}
+                                  >
+                                    {isFree ? 'Hapus (FREE dilindungi)' : 'Hapus'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -217,8 +287,9 @@ export function KelolaPlan() {
           <AlertDialogHeader>
             <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              Plan <strong>{planToDelete?.name}</strong> akan dihapus. Owner
-              yang sedang memakai plan ini tidak terpengaruh (dummy).
+              Paket <strong>{planToDelete?.name}</strong> akan dihapus. Bila
+              masih dipakai langganan aktif, paket hanya dinonaktifkan (histori
+              tagihan tetap utuh); bila tidak, dihapus permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -226,7 +297,10 @@ export function KelolaPlan() {
               Batal
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
+              onClick={() =>
+                planToDelete && deleteMutation.mutate(planToDelete.id)
+              }
+              disabled={deleteMutation.isPending}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
               Hapus Plan

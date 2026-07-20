@@ -1,58 +1,52 @@
 import { Link, useSearch } from '@tanstack/react-router'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { AuthLayout } from '../auth-layout'
 import { UserAuthForm } from './components/user-auth-form'
+
+const egnetLogo = '/images/egnet-favicon.svg'
 
 export function SignIn() {
   const { redirect } = useSearch({ from: '/(auth)/sign-in' })
 
   return (
     <AuthLayout>
-      <Card className='max-w-sm gap-4'>
-        <CardHeader>
-          <CardTitle className='text-lg tracking-tight'>Sign in</CardTitle>
-          <CardDescription>
-            Enter your email and password below to log into{' '}
-            <br className='max-sm:hidden' /> your account. Don't have an
-            account?{' '}
+      <div className='flex flex-col gap-6'>
+        {/* Logo + heading */}
+        <div className='flex flex-col items-center gap-2 text-center'>
+          <img src={egnetLogo} alt='EgNET' className='size-10' />
+          <h1 className='font-nacelle text-xl font-semibold tracking-tight'>
+            Selamat datang kembali
+          </h1>
+          <p className='text-sm text-muted-foreground'>
+            Belum punya akun?{' '}
             <Link
               to='/sign-up'
-              className='text-nowrap underline underline-offset-4 hover:text-primary'
+              className='font-medium text-primary underline underline-offset-4'
             >
-              Sign Up
+              Daftar
             </Link>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <UserAuthForm redirectTo={redirect} />
-        </CardContent>
-        <CardFooter>
-          <p className='px-8 text-center text-sm text-muted-foreground'>
-            By clicking sign in, you agree to our{' '}
-            <a
-              href='/terms'
-              className='underline underline-offset-4 hover:text-primary'
-            >
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a
-              href='/privacy'
-              className='underline underline-offset-4 hover:text-primary'
-            >
-              Privacy Policy
-            </a>
-            .
           </p>
-        </CardFooter>
-      </Card>
+        </div>
+
+        <UserAuthForm redirectTo={redirect} />
+
+        <p className='px-6 text-center text-xs text-muted-foreground'>
+          Dengan masuk, Anda menyetujui{' '}
+          <a
+            href='/terms'
+            className='underline underline-offset-4 hover:text-primary'
+          >
+            Ketentuan Layanan
+          </a>{' '}
+          dan{' '}
+          <a
+            href='/privacy'
+            className='underline underline-offset-4 hover:text-primary'
+          >
+            Kebijakan Privasi
+          </a>{' '}
+          kami.
+        </p>
+      </div>
     </AuthLayout>
   )
 }

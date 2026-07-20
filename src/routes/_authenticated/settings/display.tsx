@@ -1,6 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { SettingsDisplay } from '@/features/settings/display'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
+// Halaman Display (dummy, tanpa backend) dihapus → arahkan ke /settings.
 export const Route = createFileRoute('/_authenticated/settings/display')({
-  component: SettingsDisplay,
+  beforeLoad: () => {
+    throw redirect({ to: '/settings' })
+  },
 })

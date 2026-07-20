@@ -1,44 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import {
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontalIcon,
-  SearchIcon,
-} from 'lucide-react'
-import { toast } from 'sonner'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+import { qk } from '@/lib/query-keys'
 import { Badge } from '@/components/reui/badge'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -60,114 +30,73 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import {
-  DUMMY_OWNERS,
-  PLAN_TIERS,
-  type OwnerRow,
-  type PlanTier,
-} from './data/dummy-owners'
+  fetchOwners,
+  type OwnerPlan,
+  type OwnersResponse,
+} from './data/owners-store'
 
 const PAGE_SIZES = [10, 25, 50, 100]
+const COLS = 6
 
-function PlanBadge({ plan }: { plan: PlanTier }) {
-  if (plan === 'Pro') {
+// Paket dinamis (kode dari backend). FREE = netral, selain itu = info.
+function PlanBadge({ plan }: { plan: OwnerPlan | null }) {
+  if (!plan) {
     return (
-      <Badge size='sm' variant='warning-light'>
-        Pro
+      <Badge size='sm' variant='secondary' className='text-muted-foreground'>
+        —
       </Badge>
     )
   }
-  if (plan === 'Standard') {
+  if (plan.code === 'FREE') {
     return (
-      <Badge size='sm' variant='info-light'>
-        Standard
+      <Badge size='sm' variant='secondary' className='text-muted-foreground'>
+        {plan.name}
       </Badge>
     )
   }
   return (
-    <Badge size='sm' variant='secondary' className='text-muted-foreground'>
-      Free
+    <Badge size='sm' variant='info-light'>
+      {plan.name}
     </Badge>
   )
 }
 
 export function KelolaOwner() {
   const navigate = useNavigate()
-  const [rows, setRows] = useState<OwnerRow[]>(DUMMY_OWNERS)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [planFilter, setPlanFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  // Placeholder loading — ganti dengan isPending dari useQuery saat Kelola Owner
-  // di-wire ke GET /admin/owners (data saat ini masih dummy sinkron).
-  const [isLoading, setIsLoading] = useState(true)
 
-  const [ownerToDelete, setOwnerToDelete] = useState<OwnerRow | null>(null)
-  const [ownerToEdit, setOwnerToEdit] = useState<OwnerRow | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editEmail, setEditEmail] = useState('')
-  const [editPlan, setEditPlan] = useState<PlanTier>('Free')
-
+  // Debounce pencarian → param server; reset ke halaman 1 saat query berubah.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search)
-      setCurrentPage(1)
+      setPage(1)
     }, 300)
     return () => clearTimeout(timer)
   }, [search])
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const filtered = useMemo(() => {
-    let list = rows
-    if (planFilter !== 'all') {
-      list = list.filter((o) => o.plan === planFilter)
-    }
-    const q = debouncedSearch.trim().toLowerCase()
-    if (q) {
-      list = list.filter(
-        (o) =>
-          o.name.toLowerCase().includes(q) || o.email.toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [rows, planFilter, debouncedSearch])
-
-  const totalPages = Math.ceil(filtered.length / pageSize)
-  const safePage = Math.min(currentPage, Math.max(1, totalPages))
-  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1
-  const rangeEnd = Math.min(safePage * pageSize, filtered.length)
-
-  const openEdit = (owner: OwnerRow) => {
-    setOwnerToEdit(owner)
-    setEditName(owner.name)
-    setEditEmail(owner.email)
-    setEditPlan(owner.plan)
+  const skip = (page - 1) * pageSize
+  const params = {
+    skip,
+    take: pageSize,
+    search: debouncedSearch.trim() || undefined,
+    planCode: planFilter === 'all' ? undefined : planFilter,
   }
 
-  const handleEditSave = () => {
-    if (!ownerToEdit) return
-    setRows((prev) =>
-      prev.map((o) =>
-        o.id === ownerToEdit.id
-          ? { ...o, name: editName, email: editEmail, plan: editPlan }
-          : o
-      )
-    )
-    setOwnerToEdit(null)
-    toast.success('Data owner berhasil diperbarui (dummy)')
-  }
+  const { data, isPending, isError, refetch } = useQuery<OwnersResponse>({
+    queryKey: qk.owners(params),
+    queryFn: ({ signal }) => fetchOwners(params, signal),
+    placeholderData: keepPreviousData,
+  })
 
-  const handleDeleteConfirm = () => {
-    if (!ownerToDelete) return
-    setRows((prev) => prev.filter((o) => o.id !== ownerToDelete.id))
-    setOwnerToDelete(null)
-    toast.success('Owner berhasil dihapus (dummy)')
-  }
+  const rows = data?.data ?? []
+  const total = data?.meta.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const rangeStart = total === 0 ? 0 : skip + 1
+  const rangeEnd = skip + rows.length
 
   return (
     <>
@@ -205,7 +134,7 @@ export function KelolaOwner() {
                 value={planFilter}
                 onValueChange={(v) => {
                   setPlanFilter(v)
-                  setCurrentPage(1)
+                  setPage(1)
                 }}
               >
                 <SelectTrigger className='w-full sm:w-[160px]'>
@@ -213,11 +142,8 @@ export function KelolaOwner() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='all'>Semua Plan</SelectItem>
-                  {PLAN_TIERS.map((tier) => (
-                    <SelectItem key={tier} value={tier}>
-                      {tier}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value='FREE'>Free</SelectItem>
+                  <SelectItem value='STANDARD'>Standard</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -245,28 +171,41 @@ export function KelolaOwner() {
                       <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
                         Router
                       </TableHead>
-                      <TableHead className='text-right text-xs font-medium tracking-wide text-muted-foreground'>
-                        Transaksi POS
-                      </TableHead>
                       <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
-                        Aksi
+                        Transaksi POS
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? (
-                      <TableSkeleton rows={8} cols={7} />
-                    ) : pageRows.length === 0 ? (
+                    {isPending ? (
+                      <TableSkeleton rows={8} cols={COLS} />
+                    ) : isError ? (
+                      <TableRow className='hover:bg-transparent'>
+                        <TableCell colSpan={COLS} className='h-24 text-center'>
+                          <p className='text-sm text-muted-foreground'>
+                            Gagal memuat daftar owner.
+                          </p>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className='mt-2'
+                            onClick={() => refetch()}
+                          >
+                            Coba Lagi
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ) : rows.length === 0 ? (
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
-                          colSpan={7}
+                          colSpan={COLS}
                           className='h-24 text-center text-sm text-muted-foreground'
                         >
                           Tidak ada owner yang cocok.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pageRows.map((owner) => (
+                      rows.map((owner) => (
                         <TableRow
                           key={owner.id}
                           className='cursor-pointer'
@@ -287,52 +226,13 @@ export function KelolaOwner() {
                             <PlanBadge plan={owner.plan} />
                           </TableCell>
                           <TableCell className='text-right text-sm tabular-nums'>
-                            {owner.technicians}
+                            {owner.teknisiCount}
                           </TableCell>
                           <TableCell className='text-right text-sm tabular-nums'>
-                            {owner.routers}
+                            {owner.routerCount}
                           </TableCell>
-                          <TableCell className='text-right text-sm tabular-nums'>
-                            {owner.posTransactions.toLocaleString('id-ID')}
-                          </TableCell>
-                          <TableCell
-                            className='pe-4 text-right'
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant='ghost'
-                                  size='icon'
-                                  className='size-8'
-                                >
-                                  <MoreHorizontalIcon />
-                                  <span className='sr-only'>Buka menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align='end'>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    navigate({
-                                      to: '/users/$id',
-                                      params: { id: owner.id },
-                                    })
-                                  }
-                                >
-                                  Lihat Detail
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEdit(owner)}>
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  variant='destructive'
-                                  onClick={() => setOwnerToDelete(owner)}
-                                >
-                                  Hapus
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          <TableCell className='pe-4 text-right text-sm tabular-nums'>
+                            {owner.posCount.toLocaleString('id-ID')}
                           </TableCell>
                         </TableRow>
                       ))
@@ -344,8 +244,7 @@ export function KelolaOwner() {
               {/* Footer paginasi */}
               <div className='flex flex-col items-center justify-between gap-3 border-t px-4 py-3 sm:flex-row'>
                 <div className='text-sm text-muted-foreground tabular-nums'>
-                  Menampilkan {rangeStart}–{rangeEnd} dari {filtered.length}{' '}
-                  owner
+                  Menampilkan {rangeStart}–{rangeEnd} dari {total} owner
                 </div>
                 <div className='flex items-center gap-4'>
                   <div className='flex items-center space-x-2 text-sm text-muted-foreground'>
@@ -354,7 +253,7 @@ export function KelolaOwner() {
                       value={pageSize.toString()}
                       onValueChange={(v) => {
                         setPageSize(Number(v))
-                        setCurrentPage(1)
+                        setPage(1)
                       }}
                     >
                       <SelectTrigger className='h-8 w-[70px]'>
@@ -374,25 +273,25 @@ export function KelolaOwner() {
                     <Button
                       variant='outline'
                       size='sm'
-                      onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
-                      disabled={safePage <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
                     >
                       <ChevronLeft className='h-4 w-4' />
-                      <span className='sr-only'>Previous</span>
+                      <span className='sr-only'>Sebelumnya</span>
                     </Button>
                     <div className='px-2 text-sm font-medium tabular-nums'>
-                      Hal {safePage} dari {totalPages || 1}
+                      Hal {page} dari {totalPages}
                     </div>
                     <Button
                       variant='outline'
                       size='sm'
                       onClick={() =>
-                        setCurrentPage(Math.min(totalPages, safePage + 1))
+                        setPage((p) => Math.min(totalPages, p + 1))
                       }
-                      disabled={safePage >= totalPages || totalPages === 0}
+                      disabled={page >= totalPages}
                     >
                       <ChevronRight className='h-4 w-4' />
-                      <span className='sr-only'>Next</span>
+                      <span className='sr-only'>Berikutnya</span>
                     </Button>
                   </div>
                 </div>
@@ -401,92 +300,6 @@ export function KelolaOwner() {
           </Card>
         </div>
       </Main>
-
-      {/* Dialog edit (dummy) */}
-      <Dialog
-        open={!!ownerToEdit}
-        onOpenChange={(open) => !open && setOwnerToEdit(null)}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Edit Owner</DialogTitle>
-            <DialogDescription>
-              Ubah data owner. Perubahan hanya dummy (belum tersambung backend).
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-2'>
-            <div className='grid gap-2'>
-              <Label htmlFor='owner-name'>Nama</Label>
-              <Input
-                id='owner-name'
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
-            </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='owner-email'>Email</Label>
-              <Input
-                id='owner-email'
-                type='email'
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-              />
-            </div>
-            <div className='grid gap-2'>
-              <Label>Plan</Label>
-              <Select
-                value={editPlan}
-                onValueChange={(v) => setEditPlan(v as PlanTier)}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Pilih plan' />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLAN_TIERS.map((tier) => (
-                    <SelectItem key={tier} value={tier}>
-                      {tier}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setOwnerToEdit(null)}>
-              Batal
-            </Button>
-            <Button onClick={handleEditSave}>Simpan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Konfirmasi hapus (dummy) */}
-      <AlertDialog
-        open={!!ownerToDelete}
-        onOpenChange={(open) => !open && setOwnerToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tindakan ini tidak dapat dibatalkan. Akun owner{' '}
-              <strong>{ownerToDelete?.name}</strong> beserta seluruh datanya
-              akan dihapus dari platform.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setOwnerToDelete(null)}>
-              Batal
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-            >
-              Hapus Owner
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }

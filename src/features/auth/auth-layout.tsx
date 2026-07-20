@@ -1,19 +1,17 @@
-import { Logo } from '@/assets/logo'
-
 type AuthLayoutProps = {
   children: React.ReactNode
 }
 
+// Pola login-05 (shadcn): form terpusat, minimalis. Aksen brand landing
+// (glow indigo halus) tanpa mengganggu keterbacaan. Theme-aware.
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className='container grid h-svh max-w-none items-center justify-center'>
-      <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:p-8'>
-        <div className='mb-4 flex items-center justify-center'>
-          <Logo className='me-2' />
-          <h1 className='text-xl font-medium'>Shadcn Admin</h1>
-        </div>
-        {children}
-      </div>
+    <div className='relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden bg-background p-6 md:p-10'>
+      <div
+        aria-hidden='true'
+        className='pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-indigo-500/10 to-transparent'
+      />
+      <div className='relative w-full max-w-sm'>{children}</div>
     </div>
   )
 }

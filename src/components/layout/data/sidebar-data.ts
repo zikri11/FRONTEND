@@ -159,6 +159,38 @@ export const superAdminNavGroups: SidebarData['navGroups'] = [
   },
 ]
 
+// Sidebar khusus TEKNISI — grup terstruktur (Overview / Hotspot / Developer)
+// dengan grup terakhir tanpa judul berisi item mandiri. Selaras gaya OWNER.
+export const technicianNavGroups: SidebarData['navGroups'] = [
+  {
+    title: 'Overview',
+    items: [{ title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    title: 'Hotspot',
+    items: [
+      { title: 'Router', url: '/servers', icon: Router },
+      { title: 'Profile', url: '/profiles', icon: Package },
+      { title: 'Voucher', url: '/vouchers', icon: Ticket },
+    ],
+  },
+  {
+    title: 'Developer',
+    items: [
+      { title: 'Kelola Key', url: '/developer/keys', icon: Key },
+      { title: 'Riwayat POS', url: '/pos-transactions', icon: ReceiptText },
+      { title: 'Dokumentasi API', url: '/developer/docs', icon: BookOpen },
+    ],
+  },
+  {
+    title: '',
+    items: [
+      { title: 'AI Assistant', url: '/chats', icon: Bot },
+      { title: 'Riwayat Aktivitas', url: '/activity', icon: History },
+    ],
+  },
+]
+
 // Sidebar khusus OWNER — grup terstruktur. Grup terakhir tanpa judul
 // (dipisah garis) berisi item mandiri.
 export const ownerNavGroups: SidebarData['navGroups'] = [

@@ -52,6 +52,7 @@ import { Route as AuthenticatedRoutersIdRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProfilesAddRouteImport } from './routes/_authenticated/profiles/add'
 import { Route as AuthenticatedPlansAddRouteImport } from './routes/_authenticated/plans/add'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedBillingUpgradeRouteImport } from './routes/_authenticated/billing/upgrade'
 import { Route as AuthenticatedDeveloperKeysIndexRouteImport } from './routes/_authenticated/developer/keys/index'
 import { Route as AuthenticatedDeveloperDocsIndexRouteImport } from './routes/_authenticated/developer/docs/index'
 import { Route as AuthenticatedServersEditIdRouteImport } from './routes/_authenticated/servers/edit.$id'
@@ -292,6 +293,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedBillingUpgradeRoute =
+  AuthenticatedBillingUpgradeRouteImport.update({
+    id: '/billing/upgrade',
+    path: '/billing/upgrade',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDeveloperKeysIndexRoute =
   AuthenticatedDeveloperKeysIndexRouteImport.update({
     id: '/developer/keys/',
@@ -331,6 +338,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/billing/upgrade': typeof AuthenticatedBillingUpgradeRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/plans/add': typeof AuthenticatedPlansAddRoute
   '/profiles/add': typeof AuthenticatedProfilesAddRoute
@@ -378,6 +386,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/billing/upgrade': typeof AuthenticatedBillingUpgradeRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/plans/add': typeof AuthenticatedPlansAddRoute
   '/profiles/add': typeof AuthenticatedProfilesAddRoute
@@ -428,6 +437,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/billing/upgrade': typeof AuthenticatedBillingUpgradeRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/plans/add': typeof AuthenticatedPlansAddRoute
   '/_authenticated/profiles/add': typeof AuthenticatedProfilesAddRoute
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/dashboard'
+    | '/billing/upgrade'
     | '/errors/$error'
     | '/plans/add'
     | '/profiles/add'
@@ -525,6 +536,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/dashboard'
+    | '/billing/upgrade'
     | '/errors/$error'
     | '/plans/add'
     | '/profiles/add'
@@ -574,6 +586,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/dashboard'
+    | '/_authenticated/billing/upgrade'
     | '/_authenticated/errors/$error'
     | '/_authenticated/plans/add'
     | '/_authenticated/profiles/add'
@@ -927,6 +940,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/billing/upgrade': {
+      id: '/_authenticated/billing/upgrade'
+      path: '/billing/upgrade'
+      fullPath: '/billing/upgrade'
+      preLoaderRoute: typeof AuthenticatedBillingUpgradeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/developer/keys/': {
       id: '/_authenticated/developer/keys/'
       path: '/developer/keys'
@@ -984,6 +1004,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedBillingUpgradeRoute: typeof AuthenticatedBillingUpgradeRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedPlansAddRoute: typeof AuthenticatedPlansAddRoute
   AuthenticatedProfilesAddRoute: typeof AuthenticatedProfilesAddRoute
@@ -1017,6 +1038,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedBillingUpgradeRoute: AuthenticatedBillingUpgradeRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedPlansAddRoute: AuthenticatedPlansAddRoute,
   AuthenticatedProfilesAddRoute: AuthenticatedProfilesAddRoute,

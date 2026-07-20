@@ -1,13 +1,8 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { Vouchers } from '@/features/vouchers'
-import { useAuthStore } from '@/stores/auth-store'
 
+// Owner boleh lihat voucher (read-only) — backend GET /vouchers sudah izinkan
+// OWNER. Aksi buat/hapus/sinkron disembunyikan di dalam komponen (isOwner).
 export const Route = createFileRoute('/_authenticated/vouchers/')({
-  beforeLoad: () => {
-    const { user } = useAuthStore.getState().auth
-    if (user?.role === 'OWNER') {
-      throw redirect({ to: '/' })
-    }
-  },
   component: Vouchers,
 })

@@ -102,11 +102,19 @@ type Voucher = {
   createdAt: string
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  UNUSED: 'Belum Dipakai',
+  USED: 'Terpakai',
+  REVOKED: 'Dicabut',
+  EXPIRED: 'Kedaluwarsa',
+}
+
 export function Vouchers() {
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
   const { servers, activeServerId, isLoading } = useServerStore()
   const role = useAuthStore((s) => s.auth.user?.role)
   const isOwner = role === 'OWNER'
+  const isTechnician = role === 'TEKNISI'
   const queryClient = useQueryClient()
   const activeServer = servers.find((s) => s.id === activeServerId)
   const [search, setSearch] = React.useState('')
@@ -208,6 +216,7 @@ export function Vouchers() {
   )
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] =
     React.useState(false)
+  const [isPrintConfirmOpen, setIsPrintConfirmOpen] = React.useState(false)
 
   const vouchers = vouchersResponse.data
   const totalVouchers = vouchersResponse.meta.total
@@ -289,6 +298,25 @@ export function Vouchers() {
     const baseUrl = api.defaults.baseURL || 'http://localhost:3000/api'
     window.open(`${baseUrl}/vouchers/pdf/single/${id}`, '_blank')
   }
+
+  // Cetak massal PDF semua voucher sesuai filter aktif (server/profil/status).
+  // Endpoint publik (tanpa JWT) → cukup window.open.
+  const handlePrintFiltered = () => {
+    if (!activeServerId) return
+    const baseUrl = api.defaults.baseURL || 'http://localhost:3000/api'
+    const params = new URLSearchParams({ serverId: activeServerId })
+    if (profileFilter !== 'all') params.set('profileId', profileFilter)
+    if (statusFilter !== 'all') params.set('status', statusFilter)
+    window.open(`${baseUrl}/vouchers/pdf/filtered?${params.toString()}`, '_blank')
+  }
+
+  const printProfilLabel =
+    profileFilter === 'all'
+      ? null
+      : profiles.find((p) => p.id === profileFilter)?.name
+  const printStatusLabel =
+    statusFilter === 'all' ? null : STATUS_LABEL[statusFilter]
+  const printNoFilter = profileFilter === 'all' && statusFilter === 'all'
 
   return (
     <>
@@ -485,6 +513,16 @@ export function Vouchers() {
                           <SelectItem value='EXPIRED'>Kedaluwarsa</SelectItem>
                         </SelectContent>
                       </Select>
+                      {isTechnician && (
+                        <Button
+                          variant='outline'
+                          onClick={() => setIsPrintConfirmOpen(true)}
+                          disabled={totalVouchers === 0}
+                        >
+                          <PrinterIcon className='mr-2 h-4 w-4' />
+                          Cetak PDF
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -510,13 +548,15 @@ export function Vouchers() {
                     <Table>
                       <TableHeader>
                         <TableRow className='hover:bg-transparent'>
-                          <TableHead className='w-12 text-center'>
-                            <Checkbox
-                              id='select-all-checkbox'
-                              checked={selectAll}
-                              onCheckedChange={handleSelectAll}
-                            />
-                          </TableHead>
+                          {!isOwner && (
+                            <TableHead className='w-12 text-center'>
+                              <Checkbox
+                                id='select-all-checkbox'
+                                checked={selectAll}
+                                onCheckedChange={handleSelectAll}
+                              />
+                            </TableHead>
+                          )}
                           <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                             Kode
                           </TableHead>
@@ -540,7 +580,7 @@ export function Vouchers() {
                       <TableBody>
                         {isError ? (
                           <TableRow className='hover:bg-transparent'>
-                            <TableCell colSpan={7} className='h-24 text-center'>
+                            <TableCell colSpan={isOwner ? 6 : 7} className='h-24 text-center'>
                               <p className='text-sm text-muted-foreground'>
                                 Gagal mengambil data voucher.
                               </p>
@@ -557,7 +597,7 @@ export function Vouchers() {
                         ) : vouchers.length === 0 ? (
                           <TableRow className='hover:bg-transparent'>
                             <TableCell
-                              colSpan={7}
+                              colSpan={isOwner ? 6 : 7}
                               className='h-24 text-center text-sm text-muted-foreground'
                             >
                               {debouncedSearch ||
@@ -577,15 +617,17 @@ export function Vouchers() {
                                   : undefined
                               }
                             >
-                              <TableCell className='text-center'>
-                                <Checkbox
-                                  id={`row-${row.id}-checkbox`}
-                                  checked={selectedRows.has(row.id)}
-                                  onCheckedChange={(checked) =>
-                                    handleSelectRow(row.id, checked === true)
-                                  }
-                                />
-                              </TableCell>
+                              {!isOwner && (
+                                <TableCell className='text-center'>
+                                  <Checkbox
+                                    id={`row-${row.id}-checkbox`}
+                                    checked={selectedRows.has(row.id)}
+                                    onCheckedChange={(checked) =>
+                                      handleSelectRow(row.id, checked === true)
+                                    }
+                                  />
+                                </TableCell>
+                              )}
                               <TableCell>
                                 <div className='flex items-center gap-3'>
                                   <div className='flex size-9 shrink-0 items-center justify-center rounded-sm bg-muted'>
@@ -843,6 +885,69 @@ export function Vouchers() {
                     className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
                   >
                     Hapus Massal
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Konfirmasi cetak PDF massal */}
+            <AlertDialog
+              open={isPrintConfirmOpen}
+              onOpenChange={setIsPrintConfirmOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cetak Voucher ke PDF?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {printNoFilter ? (
+                      <>
+                        Akan mencetak <strong>SEMUA voucher</strong> di router{' '}
+                        <strong>{activeServer?.name || 'ini'}</strong>
+                        {!debouncedSearch && totalVouchers > 0
+                          ? ` (${totalVouchers} voucher)`
+                          : ''}
+                        .
+                      </>
+                    ) : (
+                      <>
+                        Akan mencetak semua voucher
+                        {printProfilLabel ? (
+                          <>
+                            {' '}
+                            profil <strong>{printProfilLabel}</strong>
+                          </>
+                        ) : null}
+                        {printStatusLabel ? (
+                          <>
+                            {' '}
+                            status <strong>{printStatusLabel}</strong>
+                          </>
+                        ) : null}{' '}
+                        di router{' '}
+                        <strong>{activeServer?.name || 'ini'}</strong>
+                        {!debouncedSearch && totalVouchers > 0
+                          ? ` (${totalVouchers} voucher)`
+                          : ''}
+                        .
+                      </>
+                    )}{' '}
+                    Seluruh voucher yang cocok akan dicetak (bukan hanya halaman
+                    ini).
+                    {debouncedSearch
+                      ? ' Kata pencarian diabaikan saat mencetak.'
+                      : ''}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      handlePrintFiltered()
+                      setIsPrintConfirmOpen(false)
+                    }}
+                  >
+                    <PrinterIcon className='mr-2 h-4 w-4' />
+                    Cetak PDF
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

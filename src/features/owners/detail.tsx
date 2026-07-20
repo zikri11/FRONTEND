@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, KeyRound, Router, Users } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { ArrowLeft, Bot, KeyRound, Router, Users } from 'lucide-react'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+import { qk } from '@/lib/query-keys'
+import { formatDateTimeId } from '@/lib/format-datetime'
 import { Badge } from '@/components/reui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -11,6 +15,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -25,46 +36,30 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { DetailSkeleton } from '@/components/skeletons/detail-skeleton'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { DUMMY_OWNERS, type PlanTier } from './data/dummy-owners'
+  fetchHealthSummary,
+  fetchOwnerDetail,
+  formatDateId,
+  formatRupiah,
+  type HealthSummaryPoint,
+} from './data/owners-store'
 
-const FILTER_MONTHS = [
-  { label: 'Januari', value: '01' },
-  { label: 'Februari', value: '02' },
-  { label: 'Maret', value: '03' },
-  { label: 'April', value: '04' },
-  { label: 'Mei', value: '05' },
-  { label: 'Juni', value: '06' },
-  { label: 'Juli', value: '07' },
-  { label: 'Agustus', value: '08' },
-  { label: 'September', value: '09' },
-  { label: 'Oktober', value: '10' },
-  { label: 'November', value: '11' },
-  { label: 'Desember', value: '12' },
+const RANGES = [
+  { label: '7 hari', value: 7 },
+  { label: '30 hari', value: 30 },
+  { label: '90 hari', value: 90 },
 ]
 
-const FILTER_YEARS = ['2024', '2025', '2026', '2027']
-
-// Kuota dummy per plan — sampai backend punya endpoint detail/agregat per tenant.
-const PLAN_META: Record<
-  PlanTier,
-  { price: string; routers: number; technicians: number; apiKeys: number }
-> = {
-  Free: { price: 'Rp 0', routers: 5, technicians: 2, apiKeys: 5 },
-  Standard: { price: 'Rp 149.000', routers: 25, technicians: 10, apiKeys: 15 },
-  Pro: { price: 'Rp 299.000', routers: 100, technicians: 50, apiKeys: 100 },
-}
+const MONTHS_ID = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+]
 
 // >85% = warning (hampir penuh), >=100% = destructive (kuota habis)
 function progressStateClass(pct: number): string {
@@ -75,69 +70,110 @@ function progressStateClass(pct: number): string {
   return ''
 }
 
-const MONTHS_ID = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'Mei',
-  'Jun',
-  'Jul',
-  'Agu',
-  'Sep',
-  'Okt',
-  'Nov',
-  'Des',
-]
-
-const DAYS = 30
-// Statis, konsisten dummy lain
-const TODAY = new Date(2026, 6, 14)
-
-type OutletMonitor = {
-  name: string
-  online: boolean
-  availability: string
-  lastOffline: string
-  days: { date: string; down: boolean }[]
+// Kunci hari UTC (cocok dgn date_trunc('day') backend) untuk `days` terakhir.
+function buildDayKeys(days: number): string[] {
+  const now = new Date()
+  const base = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const keys: string[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    keys.push(new Date(base - i * 86_400_000).toISOString().slice(0, 10))
+  }
+  return keys
 }
 
-// Outlet monitoring dummy deterministik per owner (seed = indeks owner)
-function buildOutlets(seed: number, routerCount: number): OutletMonitor[] {
-  const count = Math.max(1, Math.min(routerCount, 5))
-  const outlets: OutletMonitor[] = []
-  for (let n = 0; n < count; n++) {
-    const downDay = (seed * 3 + n * 7) % DAYS
-    const hasDown = (seed + n) % 3 !== 0
-    const online = (seed + n) % 4 !== 0
-    const days = Array.from({ length: DAYS }, (_, d) => {
-      const date = new Date(TODAY)
-      date.setDate(date.getDate() - (DAYS - 1 - d))
-      const isLastAndOffline = !online && d === DAYS - 1
-      return {
-        date: `${date.getDate()} ${MONTHS_ID[date.getMonth()]} ${date.getFullYear()}`,
-        down: (hasDown && d === downDay) || isLastAndOffline,
-      }
-    })
-    const downCount = days.filter((d) => d.down).length
-    outlets.push({
-      name: `Outlet ${n + 1}`,
-      online,
-      availability: `${(100 - downCount * 0.42).toFixed(2)}%`,
-      lastOffline: !online
-        ? 'Sedang offline'
-        : hasDown
-          ? `${days[downDay].date}, 09:${String(10 + ((seed + n) % 45)).padStart(2, '0')} (${4 + ((seed * n) % 20)} menit)`
-        : '—',
-      days,
-    })
-  }
-  return outlets
+function prettyDay(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  return `${d} ${MONTHS_ID[m - 1]} ${y}`
+}
+
+type DayState = 'up' | 'down' | 'none'
+
+function OutletTimeline({
+  points,
+  days,
+  isLoading,
+}: {
+  points: HealthSummaryPoint[] | undefined
+  days: number
+  isLoading: boolean
+}) {
+  const byDate = new Map((points ?? []).map((p) => [p.date, p]))
+  const cells = buildDayKeys(days).map((key) => {
+    const point = byDate.get(key)
+    let state: DayState = 'none'
+    if (point) state = point.fails > 0 ? 'down' : 'up'
+    return { key, state, fails: point?.fails ?? 0 }
+  })
+
+  return (
+    <TooltipProvider delayDuration={100}>
+      <div
+        className={`flex h-6 w-full max-w-[320px] items-center justify-between gap-[2px] ${
+          isLoading ? 'opacity-50' : ''
+        }`}
+      >
+        {cells.map((cell) => (
+          <Tooltip key={cell.key}>
+            <TooltipTrigger asChild>
+              <div
+                className={`h-full flex-1 cursor-pointer rounded-[2px] transition-colors hover:opacity-80 ${
+                  cell.state === 'down'
+                    ? 'bg-destructive/80'
+                    : cell.state === 'up'
+                      ? 'bg-success/80'
+                      : 'bg-muted'
+                }`}
+              />
+            </TooltipTrigger>
+            <TooltipContent side='top' className='text-xs'>
+              <p className='font-medium'>{prettyDay(cell.key)}</p>
+              <p className='text-muted-foreground'>
+                {cell.state === 'down'
+                  ? `${cell.fails.toLocaleString('id-ID')}× terdeteksi offline`
+                  : cell.state === 'up'
+                    ? 'Tidak ada downtime'
+                    : 'Tidak ada data'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
+  )
+}
+
+function availabilityLabel(points: HealthSummaryPoint[] | undefined): string {
+  const pts = points ?? []
+  const checks = pts.reduce((a, p) => a + p.checks, 0)
+  if (checks === 0) return '—'
+  const fails = pts.reduce((a, p) => a + p.fails, 0)
+  const pct = Math.round(((checks - fails) / checks) * 10000) / 100
+  return `${pct}%`
 }
 
 export function OwnerDetail({ ownerId }: { ownerId: string }) {
-  const ownerIndex = DUMMY_OWNERS.findIndex((o) => o.id === ownerId)
-  const owner = ownerIndex >= 0 ? DUMMY_OWNERS[ownerIndex] : null
+  const [days, setDays] = useState(30)
+
+  const {
+    data: owner,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: qk.owner(ownerId),
+    queryFn: ({ signal }) => fetchOwnerDetail(ownerId, signal),
+  })
+
+  const outlets = owner?.monitoring.outlets ?? []
+  const summaryQueries = useQueries({
+    queries: outlets.map((o) => ({
+      queryKey: qk.healthSummary(o.serverId, days),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        fetchHealthSummary(o.serverId, days, signal),
+    })),
+  })
+
+  const sub = owner?.subscription ?? null
+  const usage = owner?.usage
 
   return (
     <>
@@ -161,7 +197,7 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
           </Button>
         </div>
         <div className={`${outerBoxClass} flex-1`}>
-          {!owner ? (
+          {isError ? (
             <div className='flex flex-1 flex-col items-center justify-center py-20 text-center'>
               <h2 className='mb-2 text-xl font-semibold'>
                 Owner Tidak Ditemukan
@@ -176,6 +212,8 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                 Kembali ke Kelola Owner
               </Link>
             </div>
+          ) : isPending || !owner ? (
+            <DetailSkeleton />
           ) : (
             <>
               <div>
@@ -183,7 +221,7 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                   {owner.name}
                 </h2>
                 <p className='mt-1 text-sm text-muted-foreground'>
-                  {owner.email} - Akun dibuat {owner.createdAt}
+                  {owner.email} · Akun dibuat {formatDateId(owner.createdAt)}
                 </p>
               </div>
 
@@ -196,25 +234,38 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                     </p>
                     <div className='mt-1 flex items-center gap-2'>
                       <span className='text-2xl font-semibold tracking-tight'>
-                        {owner.plan}
+                        {sub?.plan.name ?? 'Tanpa Paket'}
                       </span>
-                      <Badge variant='success-light' size='sm'>
-                        Aktif
-                      </Badge>
+                      {sub?.status === 'ACTIVE' ? (
+                        <Badge variant='success-light' size='sm'>
+                          Aktif
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant='secondary'
+                          size='sm'
+                          className='text-muted-foreground'
+                        >
+                          Tidak aktif
+                        </Badge>
+                      )}
                     </div>
                     <p className='mt-1 text-xs text-muted-foreground'>
-                      {owner.plan === 'Free'
-                        ? 'Tanpa masa berlaku'
-                        : 'Berlaku sampai 14 Agu 2026'}
+                      {sub?.expiredAt
+                        ? `Berlaku sampai ${formatDateId(sub.expiredAt)}`
+                        : 'Tanpa masa berlaku'}
                     </p>
                   </div>
                   <div>
                     <span className='text-2xl font-semibold tracking-tight tabular-nums'>
-                      {PLAN_META[owner.plan].price}
+                      {sub ? formatRupiah(sub.plan.price) : 'Rp 0'}
                     </span>
-                    <span className='text-sm text-muted-foreground'>
-                      /bulan
-                    </span>
+                    {sub && sub.plan.durationDays ? (
+                      <span className='text-sm text-muted-foreground'>
+                        {' '}
+                        / {sub.plan.durationDays} hari
+                      </span>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -224,56 +275,67 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                 <CardHeader>
                   <CardTitle>Pemakaian Periode Ini</CardTitle>
                   <CardDescription>
-                    Kuota terpakai dari paket {owner.plan}.
+                    Kuota terpakai dari paket {sub?.plan.name ?? 'saat ini'}.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className='grid gap-6 sm:grid-cols-3'>
-                  {[
-                    {
-                      label: 'Router',
-                      used: owner.routers,
-                      limit: PLAN_META[owner.plan].routers,
-                      unit: 'router',
-                      icon: Router,
-                    },
-                    {
-                      label: 'Teknisi',
-                      used: owner.technicians,
-                      limit: PLAN_META[owner.plan].technicians,
-                      unit: 'teknisi',
-                      icon: Users,
-                    },
-                    {
-                      label: 'API Key',
-                      used: owner.routers,
-                      limit: PLAN_META[owner.plan].apiKeys,
-                      unit: 'API key',
-                      icon: KeyRound,
-                    },
-                  ].map((item) => {
-                    const pct = Math.round((item.used / item.limit) * 100)
-                    const barPct = Math.min(100, pct)
-                    return (
-                      <div key={item.label}>
-                        <div className='flex items-center justify-between'>
-                          <span className='flex items-center gap-2 text-sm font-medium'>
-                            <item.icon className='h-4 w-4 text-muted-foreground' />
-                            {item.label}
-                          </span>
-                          <span className='text-sm font-medium tabular-nums'>
-                            {pct}%
-                          </span>
+                <CardContent className='flex flex-col gap-6'>
+                  <div className='grid gap-6 sm:grid-cols-2'>
+                    {[
+                      {
+                        label: 'Router',
+                        used: usage?.routers.used ?? 0,
+                        limit: usage?.routers.max ?? 0,
+                        unit: 'router',
+                        icon: Router,
+                      },
+                      {
+                        label: 'Teknisi',
+                        used: usage?.teknisi.used ?? 0,
+                        limit: usage?.teknisi.max ?? 0,
+                        unit: 'teknisi',
+                        icon: Users,
+                      },
+                    ].map((item) => {
+                      const pct =
+                        item.limit > 0
+                          ? Math.round((item.used / item.limit) * 100)
+                          : 0
+                      return (
+                        <div key={item.label}>
+                          <div className='flex items-center justify-between'>
+                            <span className='flex items-center gap-2 text-sm font-medium'>
+                              <item.icon className='h-4 w-4 text-muted-foreground' />
+                              {item.label}
+                            </span>
+                            <span className='text-sm font-medium tabular-nums'>
+                              {pct}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={Math.min(100, pct)}
+                            className={`mt-2 h-2 ${progressStateClass(pct)}`}
+                          />
+                          <p className='mt-2 text-xs text-muted-foreground tabular-nums'>
+                            {item.used} dari {item.limit} {item.unit}
+                          </p>
                         </div>
-                        <Progress
-                          value={barPct}
-                          className={`mt-2 h-2 ${progressStateClass(pct)}`}
-                        />
-                        <p className='mt-2 text-xs text-muted-foreground tabular-nums'>
-                          {item.used} dari {item.limit} {item.unit}
-                        </p>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
+
+                  {/* Fitur paket (boolean — backend tak kirim kuota API key) */}
+                  <div className='flex flex-wrap gap-6 border-t pt-4'>
+                    <div className='flex items-center gap-2 text-sm'>
+                      <Bot className='h-4 w-4 text-muted-foreground' />
+                      <span className='font-medium'>Akses AI</span>
+                      <FeatureBadge on={!!usage?.aiAccess} />
+                    </div>
+                    <div className='flex items-center gap-2 text-sm'>
+                      <KeyRound className='h-4 w-4 text-muted-foreground' />
+                      <span className='font-medium'>Akses API Key</span>
+                      <FeatureBadge on={!!usage?.apiKeyAccess} />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -286,32 +348,21 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                       Status dan ketersediaan router milik owner ini.
                     </CardDescription>
                   </div>
-                  <div className='flex items-center gap-2'>
-                    <Select defaultValue='07'>
-                      <SelectTrigger className='w-[140px] bg-background'>
-                        <SelectValue placeholder='Bulan' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FILTER_MONTHS.map((m) => (
-                          <SelectItem key={m.value} value={m.value}>
-                            {m.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select defaultValue='2026'>
-                      <SelectTrigger className='w-[100px] bg-background'>
-                        <SelectValue placeholder='Tahun' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FILTER_YEARS.map((y) => (
-                          <SelectItem key={y} value={y}>
-                            {y}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value={days.toString()}
+                    onValueChange={(v) => setDays(Number(v))}
+                  >
+                    <SelectTrigger className='w-[140px] bg-background'>
+                      <SelectValue placeholder='Rentang' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RANGES.map((r) => (
+                        <SelectItem key={r.value} value={r.value.toString()}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent className='px-0'>
                   <div className='overflow-x-auto'>
@@ -327,79 +378,70 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
                           <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
                             Availability
                           </TableHead>
-                          <TableHead className='min-w-[280px] text-xs font-medium tracking-wide text-muted-foreground'>
-                            Timeline (30 Hari)
+                          <TableHead className='min-w-[320px] text-xs font-medium tracking-wide text-muted-foreground'>
+                            Timeline ({days} Hari)
                           </TableHead>
                           <TableHead className='pe-4 text-right text-xs font-medium tracking-wide text-muted-foreground'>
-                            Last Offline
+                            Terakhir Dicek
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {buildOutlets(ownerIndex, owner.routers).map(
-                          (outlet) => (
-                            <TableRow key={outlet.name}>
-                              <TableCell className='ps-4 text-sm text-foreground whitespace-nowrap'>
-                                {outlet.name}
-                              </TableCell>
-                              <TableCell>
-                                {outlet.online ? (
-                                  <Badge
-                                    size='sm'
-                                    className='border-success/20 bg-success/10 text-success'
-                                  >
-                                    Online
-                                  </Badge>
-                                ) : (
-                                  <Badge
-                                    size='sm'
-                                    variant='secondary'
-                                    className='text-muted-foreground'
-                                  >
-                                    Offline
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className='font-mono text-xs tabular-nums'>
-                                {outlet.availability}
-                              </TableCell>
-                              <TableCell>
-                                <TooltipProvider delayDuration={100}>
-                                  <div className='flex h-6 w-full max-w-[280px] items-center justify-between gap-[2px]'>
-                                    {outlet.days.map((day, idx) => (
-                                      <Tooltip key={idx}>
-                                        <TooltipTrigger asChild>
-                                          <div
-                                            className={`h-full flex-1 cursor-pointer rounded-[2px] transition-colors hover:opacity-80 ${
-                                              day.down
-                                                ? 'bg-destructive/80'
-                                                : 'bg-success/80'
-                                            }`}
-                                          />
-                                        </TooltipTrigger>
-                                        <TooltipContent
-                                          side='top'
-                                          className='text-xs'
-                                        >
-                                          <p className='font-medium'>
-                                            {day.date}
-                                          </p>
-                                          <p className='text-muted-foreground'>
-                                            {day.down
-                                              ? 'Downtime terdeteksi'
-                                              : 'Tidak ada downtime'}
-                                          </p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ))}
-                                  </div>
-                                </TooltipProvider>
-                              </TableCell>
-                              <TableCell className='pe-4 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
-                                {outlet.lastOffline}
-                              </TableCell>
-                            </TableRow>
-                          )
+                        {outlets.length === 0 ? (
+                          <TableRow className='hover:bg-transparent'>
+                            <TableCell
+                              colSpan={5}
+                              className='h-24 text-center text-sm text-muted-foreground'
+                            >
+                              Owner ini belum punya outlet (router).
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          outlets.map((outlet, i) => {
+                            const q = summaryQueries[i]
+                            const points = q?.data
+                            const online = outlet.lastStatus === 'ONLINE'
+                            return (
+                              <TableRow key={outlet.serverId}>
+                                <TableCell className='ps-4 text-sm text-foreground whitespace-nowrap'>
+                                  {outlet.name}
+                                </TableCell>
+                                <TableCell>
+                                  {online ? (
+                                    <Badge
+                                      size='sm'
+                                      className='border-success/20 bg-success/10 text-success'
+                                    >
+                                      Online
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      size='sm'
+                                      variant='secondary'
+                                      className='text-muted-foreground'
+                                    >
+                                      Offline
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className='font-mono text-xs tabular-nums'>
+                                  {availabilityLabel(points)}
+                                </TableCell>
+                                <TableCell>
+                                  <OutletTimeline
+                                    points={points}
+                                    days={days}
+                                    isLoading={q?.isPending ?? true}
+                                  />
+                                </TableCell>
+                                <TableCell className='pe-4 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
+                                  {outlet.lastCheckedAt
+                                    ? formatDateTimeId(outlet.lastCheckedAt)
+                                    : '—'}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
                         )}
                       </TableBody>
                     </Table>
@@ -411,5 +453,17 @@ export function OwnerDetail({ ownerId }: { ownerId: string }) {
         </div>
       </Main>
     </>
+  )
+}
+
+function FeatureBadge({ on }: { on: boolean }) {
+  return on ? (
+    <Badge size='sm' variant='success-light'>
+      Aktif
+    </Badge>
+  ) : (
+    <Badge size='sm' variant='secondary' className='text-muted-foreground'>
+      Nonaktif
+    </Badge>
   )
 }

@@ -1,9 +1,12 @@
 import { z } from 'zod'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from '@tanstack/react-router'
-import { showSubmittedData } from '@/lib/show-submitted-data'
-import { cn } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { toast } from 'sonner'
+import { api } from '@/lib/axios'
+import { useAuthStore } from '@/stores/auth-store'
+import { Badge } from '@/components/reui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -15,162 +18,214 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
-const profileFormSchema = z.object({
-  username: z
-    .string('Please enter your username.')
-    .min(2, 'Username must be at least 2 characters.')
-    .max(30, 'Username must not be longer than 30 characters.'),
-  email: z.email({
-    error: (iss) =>
-      iss.input === undefined
-        ? 'Please select an email to display.'
-        : undefined,
-  }),
-  bio: z.string().max(160).min(4),
-  urls: z
-    .array(
-      z.object({
-        value: z.url('Please enter a valid URL.'),
-      })
-    )
-    .optional(),
-})
+// GET /auth/me → data akun (nama/email/role/bergabung). Update nama & password
+// via PATCH /users/:id (OWNER/SUPER_ADMIN). TEKNISI = read-only (tak ada endpoint).
+type Me = {
+  id: string
+  email: string
+  name: string
+  role: 'SUPER_ADMIN' | 'OWNER' | 'TEKNISI'
+  ownerId: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+const ROLE_LABEL: Record<Me['role'], string> = {
+  SUPER_ADMIN: 'Super Admin',
+  OWNER: 'Owner',
+  TEKNISI: 'Teknisi',
+}
+
+const profileFormSchema = z
+  .object({
+    name: z
+      .string()
+      .min(2, 'Nama minimal 2 karakter.')
+      .max(60, 'Nama maksimal 60 karakter.'),
+    newPassword: z.string(),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === '' || d.newPassword.length >= 6, {
+    message: 'Password minimal 6 karakter.',
+    path: ['newPassword'],
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: 'Konfirmasi password tidak cocok.',
+    path: ['confirmPassword'],
+  })
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<ProfileFormValues> = {
-  bio: 'I own a computer.',
-  urls: [
-    { value: 'https://shadcn.com' },
-    { value: 'http://twitter.com/shadcn' },
-  ],
+function formatDate(iso?: string): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  const m =
+    error instanceof AxiosError ? error.response?.data?.message : undefined
+  if (Array.isArray(m)) return m.join(', ')
+  return typeof m === 'string' ? m : fallback
 }
 
 export function ProfileForm() {
+  const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.auth.user)
+  const setUser = useAuthStore((s) => s.auth.setUser)
+  const isReadOnly = user?.role === 'TEKNISI'
+
+  const { data: me } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: ({ signal }) =>
+      api.get('/auth/me', { signal }).then((r) => r.data as Me),
+  })
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues,
+    // Sinkron dari server saat /auth/me tiba (tetap simpan editan pengguna).
+    values: {
+      name: me?.name ?? user?.name ?? '',
+      newPassword: '',
+      confirmPassword: '',
+    },
     mode: 'onChange',
   })
 
-  const { fields, append } = useFieldArray({
-    name: 'urls',
-    control: form.control,
+  const mutation = useMutation({
+    mutationFn: (data: ProfileFormValues) => {
+      const payload: { name: string; password?: string } = {
+        name: data.name.trim(),
+      }
+      if (data.newPassword) payload.password = data.newPassword
+      return api.patch(`/users/${user?.id}`, payload)
+    },
+    onSuccess: (_res, data) => {
+      toast.success('Profil berhasil diperbarui')
+      if (user) setUser({ ...user, name: data.name.trim() })
+      queryClient.invalidateQueries({ queryKey: ['auth-me'] })
+      form.reset({
+        name: data.name.trim(),
+        newPassword: '',
+        confirmPassword: '',
+      })
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, 'Gagal memperbarui profil')),
   })
+
+  const email = me?.email ?? user?.email ?? '—'
+  const role = me?.role ?? user?.role
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
+        onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
         className='space-y-8'
       >
+        {/* Informasi akun (read-only) */}
+        <div className='grid gap-5 sm:grid-cols-2'>
+          <div className='grid gap-2'>
+            <Label className='text-muted-foreground'>Email</Label>
+            <Input value={email} readOnly disabled />
+            <p className='text-[0.8rem] text-muted-foreground'>
+              Email tidak dapat diubah.
+            </p>
+          </div>
+          <div className='grid gap-2'>
+            <Label className='text-muted-foreground'>Peran</Label>
+            <div>
+              <Badge variant='secondary'>
+                {role ? ROLE_LABEL[role] : '—'}
+              </Badge>
+            </div>
+          </div>
+          <div className='grid gap-2'>
+            <Label className='text-muted-foreground'>Bergabung</Label>
+            <p className='text-sm tabular-nums'>{formatDate(me?.createdAt)}</p>
+          </div>
+        </div>
+
+        {/* Nama */}
         <FormField
           control={form.control}
-          name='username'
+          name='name'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Nama</FormLabel>
               <FormControl>
-                <Input placeholder='shadcn' {...field} />
-              </FormControl>
-              <FormDescription>
-                This is your public display name. It can be your real name or a
-                pseudonym. You can only change this once every 30 days.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='email'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select a verified email to display' />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value='m@example.com'>m@example.com</SelectItem>
-                  <SelectItem value='m@google.com'>m@google.com</SelectItem>
-                  <SelectItem value='m@support.com'>m@support.com</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                You can manage verified email addresses in your{' '}
-                <Link to='/'>email settings</Link>.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='bio'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bio</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder='Tell us a little bit about yourself'
-                  className='resize-none'
+                <Input
+                  placeholder='Nama Anda'
+                  disabled={isReadOnly}
                   {...field}
                 />
               </FormControl>
               <FormDescription>
-                You can <span>@mention</span> other users and organizations to
-                link to them.
+                Nama yang ditampilkan di profil Anda.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div>
-          {fields.map((field, index) => (
+
+        {/* Ganti password (Owner/Super Admin) */}
+        {!isReadOnly && (
+          <div className='grid gap-5 sm:grid-cols-2'>
             <FormField
               control={form.control}
-              key={field.id}
-              name={`urls.${index}.value`}
+              name='newPassword'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={cn(index !== 0 && 'sr-only')}>
-                    URLs
-                  </FormLabel>
-                  <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                    Add links to your website, blog, or social media profiles.
-                  </FormDescription>
-                  <FormControl className={cn(index !== 0 && 'mt-1.5')}>
-                    <Input {...field} />
+                  <FormLabel>Password Baru</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='password'
+                      placeholder='Kosongkan bila tak ganti'
+                      autoComplete='new-password'
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          ))}
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            className='mt-2'
-            onClick={() => append({ value: '' })}
-          >
-            Add URL
+            <FormField
+              control={form.control}
+              name='confirmPassword'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Konfirmasi Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='password'
+                      placeholder='Ulangi password baru'
+                      autoComplete='new-password'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+
+        {isReadOnly ? (
+          <p className='text-sm text-muted-foreground'>
+            Sebagai Teknisi, Anda tidak dapat mengubah data akun. Hubungi
+            Owner/Admin untuk perubahan.
+          </p>
+        ) : (
+          <Button type='submit' disabled={mutation.isPending}>
+            {mutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
           </Button>
-        </div>
-        <Button type='submit'>Update profile</Button>
+        )}
       </form>
     </Form>
   )

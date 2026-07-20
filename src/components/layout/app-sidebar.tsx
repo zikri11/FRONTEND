@@ -11,6 +11,7 @@ import {
   sidebarData,
   superAdminNavGroups,
   ownerNavGroups,
+  technicianNavGroups,
 } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
@@ -49,7 +50,11 @@ export function AppSidebar() {
             ? ownerNavGroups.map((group) => (
                 <NavGroup key={group.title} {...group} />
               ))
-            : sidebarData.navGroups.map((group) => {
+            : user?.role === 'TEKNISI'
+              ? technicianNavGroups.map((group) => (
+                  <NavGroup key={group.title} {...group} />
+                ))
+              : sidebarData.navGroups.map((group) => {
           const filteredItems = group.items.filter((item) => {
             if (user?.role === 'TEKNISI' && item.title === 'Kelola Teknisi') {
               return false

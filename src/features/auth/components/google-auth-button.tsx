@@ -40,7 +40,7 @@ export function GoogleAuthButton({ redirectTo }: { redirectTo?: string }) {
         </div>
         <div className='relative flex justify-center text-xs uppercase'>
           <span className='bg-background px-2 text-muted-foreground'>
-            Or continue with
+            Atau lanjut dengan
           </span>
         </div>
       </div>

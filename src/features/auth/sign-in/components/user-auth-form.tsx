@@ -19,7 +19,11 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
-import { applyAuthSession, getAuthErrorMessage } from '../../auth-session'
+import {
+  applyAuthSession,
+  getAuthErrorMessage,
+  safeRedirect,
+} from '../../auth-session'
 import { GoogleAuthButton } from '../../components/google-auth-button'
 
 const formSchema = z.object({
@@ -67,9 +71,8 @@ export function UserAuthForm({
 
       toast.success(`Selamat datang kembali, ${response.data.user.name}!`)
 
-      // Arahkan ke dashboard
-      const targetPath = redirectTo || '/dashboard'
-      navigate({ to: targetPath, replace: true })
+      // Arahkan ke tujuan aman (buang redirect nested / auth / eksternal)
+      navigate({ to: safeRedirect(redirectTo), replace: true })
     } catch (error) {
       const errorMessage = getAuthErrorMessage(
         error,

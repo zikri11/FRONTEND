@@ -29,9 +29,12 @@ export const useAuthStore = create<AuthState>()(
           set((state) => ({ auth: { ...state.auth, user } })),
         setAccessToken: (accessToken) =>
           set((state) => ({ auth: { ...state.auth, accessToken } })),
+        // Kosongkan user + token TANPA mengganti setter — mengganti seluruh
+        // objek auth membuat setAccessToken/setUser jadi no-op, sehingga login
+        // berikutnya (tanpa reload) gagal menyimpan sesi.
         reset: () =>
-          set(() => ({
-            auth: { user: null, accessToken: '', setUser: () => {}, setAccessToken: () => {}, reset: () => {} },
+          set((state) => ({
+            auth: { ...state.auth, user: null, accessToken: '' },
           })),
       },
     }),
@@ -44,13 +47,16 @@ export const useAuthStore = create<AuthState>()(
           accessToken: state.auth.accessToken,
         },
       }),
-      merge: (persistedState: any, currentState) => {
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as
+          | { auth?: { user?: AuthUser | null; accessToken?: string } }
+          | undefined
         return {
           ...currentState,
           auth: {
             ...currentState.auth,
-            user: persistedState?.auth?.user || null,
-            accessToken: persistedState?.auth?.accessToken || '',
+            user: persisted?.auth?.user ?? null,
+            accessToken: persisted?.auth?.accessToken ?? '',
           },
         }
       },

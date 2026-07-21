@@ -3,7 +3,11 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth-store'
-import { applyAuthSession, getAuthErrorMessage } from '../auth-session'
+import {
+  applyAuthSession,
+  getAuthErrorMessage,
+  safeRedirect,
+} from '../auth-session'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as
   | string
@@ -26,7 +30,7 @@ export function GoogleAuthButton({ redirectTo }: { redirectTo?: string }) {
       const response = await api.post('/auth/google', { idToken })
       applyAuthSession(response.data, auth)
       toast.success(`Selamat datang, ${response.data.user.name}!`)
-      navigate({ to: redirectTo || '/dashboard', replace: true })
+      navigate({ to: safeRedirect(redirectTo), replace: true })
     } catch (error) {
       toast.error(getAuthErrorMessage(error, 'Login Google gagal, coba lagi'))
     }

@@ -17,6 +17,7 @@ import {
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { PlusIcon, Loader2, RefreshCw, BadgeCheck, XCircle } from 'lucide-react'
+import { PlusIcon, Loader2, RefreshCw, BadgeCheck, XCircle, Users } from 'lucide-react'
 import { api } from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from 'sonner'
@@ -183,8 +184,13 @@ export function Technicians() {
                 </TableRow>
               ) : technicians.length === 0 ? (
                 <TableRow className='hover:bg-transparent'>
-                  <TableCell colSpan={5} className='h-24 text-center text-sm text-muted-foreground'>
-                    Belum ada data teknisi.
+                  <TableCell colSpan={5} className='py-12 text-center text-sm text-muted-foreground'>
+                    <div className='flex flex-col items-center gap-3'>
+                      <IconStack aria-hidden='true'>
+                        <Users className='size-5' />
+                      </IconStack>
+                      <span>Belum ada data Teknisi saat ini.</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

@@ -9,7 +9,6 @@ import {
   TelescopeIcon, 
   GlobeIcon, 
   PaperclipIcon, 
-  X, 
   MessageSquareIcon,
   Trash2Icon,
   Maximize2Icon
@@ -66,7 +65,6 @@ type Message = {
 
 export function ChatBubble() {
   const { activeServerId, servers, fetchServers } = useServerStore()
-  const [step, setStep] = useState<'welcome' | 'chat'>('welcome')
   const [sessions, setSessions] = useState<any[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [activeMessages, setActiveMessages] = useState<Message[]>([])
@@ -93,26 +91,24 @@ export function ChatBubble() {
 
   // Fetch Session List
   useEffect(() => {
-    if (step === 'chat') {
-      const fetchSessions = async () => {
-        setIsLoadingSessions(true)
-        try {
-          const res = await api.get('/ai/chat/sessions')
-          setSessions(res.data)
-          if (res.data.length > 0 && !activeSessionId) {
-            setActiveSessionId(res.data[0].id)
-          } else if (res.data.length === 0) {
-            setActiveSessionId('new')
-          }
-        } catch (error) {
-          console.error('Gagal mengambil sesi chat', error)
-        } finally {
-          setIsLoadingSessions(false)
+    const fetchSessions = async () => {
+      setIsLoadingSessions(true)
+      try {
+        const res = await api.get('/ai/chat/sessions')
+        setSessions(res.data)
+        if (res.data.length > 0 && !activeSessionId) {
+          setActiveSessionId(res.data[0].id)
+        } else if (res.data.length === 0) {
+          setActiveSessionId('new')
         }
+      } catch (error) {
+        console.error('Gagal mengambil sesi chat', error)
+      } finally {
+        setIsLoadingSessions(false)
       }
-      fetchSessions()
     }
-  }, [step])
+    fetchSessions()
+  }, [])
 
   // Fetch Message History when session changes
   useEffect(() => {
@@ -276,7 +272,7 @@ export function ChatBubble() {
 
   return (
     <div className='fixed bottom-6 right-6 z-50'>
-      <Popover onOpenChange={(open) => { if (!open) setStep('welcome') }}>
+      <Popover>
         <PopoverTrigger asChild>
           <Button size='icon' className='h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all'>
             <Bot className='h-6 w-6' />
@@ -285,40 +281,9 @@ export function ChatBubble() {
         <PopoverContent 
           align='end' 
           sideOffset={16} 
-          className={`p-0 overflow-hidden shadow-2xl rounded-xl border-none transition-all duration-300 ${
-            step === 'welcome' 
-              ? 'w-80 bg-[#2d2d2d] text-white' 
-              : 'w-[360px] sm:w-[600px] bg-background text-foreground border'
-          }`}
+          className='p-0 overflow-hidden shadow-2xl rounded-xl transition-all duration-300 w-[360px] sm:w-[600px] bg-background text-foreground border'
         >
-          {step === 'welcome' ? (
-            <div className='p-6'>
-              <h3 className='text-2xl font-semibold tracking-tight mb-2'>
-                Your always-on AI companion.
-              </h3>
-              <p className='text-sm text-gray-300 mb-6'>
-                Get quick answers, smart ideas, and instant support whenever you need it.
-              </p>
-              
-              <div className='flex justify-center mb-6'>
-                <img 
-                  src='https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=400&auto=format&fit=crop' 
-                  alt='AI Robot' 
-                  className='w-full h-48 object-cover rounded-lg'
-                />
-              </div>
-
-              <Button 
-                variant='secondary' 
-                className='w-fit flex items-center gap-2 bg-white text-black hover:bg-gray-200'
-                onClick={() => {
-                  setStep('chat')
-                }}
-              >
-                Next <span className='text-lg'>&raquo;</span>
-              </Button>
-            </div>
-          ) : (
+          {(
             <div className='flex h-[500px] w-full overflow-hidden'>
               {/* Sidebar List di Samping */}
               <div className='hidden sm:flex w-[200px] border-e bg-muted/60 dark:bg-zinc-900/60 p-3 flex-col justify-between shrink-0 backdrop-blur-sm'>
@@ -404,7 +369,7 @@ export function ChatBubble() {
                     <HoverCard openDelay={10} closeDelay={100}>
                       <HoverCardTrigger asChild>
                         <Button variant="ghost" size="icon" className='h-8 w-8' asChild>
-                          <Link to="/chats" onClick={() => setStep('welcome')}>
+                          <Link to="/chats">
                             <Maximize2Icon className="h-4 w-4" />
                           </Link>
                         </Button>
@@ -422,9 +387,6 @@ export function ChatBubble() {
 
                     <Button variant="ghost" size="icon" className='h-8 w-8' onClick={resetChat} title="Reset percakapan">
                       <RotateCwIcon className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className='h-8 w-8' onClick={() => setStep('welcome')} title="Kembali ke sambutan">
-                      <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardHeader>

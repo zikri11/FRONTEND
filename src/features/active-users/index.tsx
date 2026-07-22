@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Progress } from "@/components/ui/progress"
 import { Badge } from '@/components/reui/badge'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { parseMikrotikTime, formatToReadableTime } from '@/lib/mikrotik-time'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
-import { ArrowDown, ArrowUp, Loader2, Users } from 'lucide-react'
+import { ArrowDown, ArrowUp, Users } from 'lucide-react'
 // Interfaces
 
 const formatBytes = (bytes?: number, decimals = 2) => {
@@ -100,14 +101,7 @@ export function ActiveUsersFeature() {
                         </TableCell>
                       </TableRow>
                     ) : isLoadingUsers || isLoadingServers ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className='h-24 text-center'>
-                          <div className='flex items-center justify-center text-text-secondary'>
-                            <Loader2 className='h-5 w-5 animate-spin mr-2' />
-                            Memuat data pengguna...
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      <TableSkeleton rows={5} cols={6} />
                     ) : isError ? (
                       <TableRow>
                         <TableCell colSpan={6} className='h-24 text-center'>

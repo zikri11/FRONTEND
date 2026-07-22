@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/reui/badge'
 import { IconStack } from '@/components/reui/icon-stack'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -156,11 +157,7 @@ export function Servers() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow className='hover:bg-transparent'>
-                  <TableCell colSpan={4} className='h-24 text-center text-sm text-muted-foreground'>
-                    Memuat data router...
-                  </TableCell>
-                </TableRow>
+                <TableSkeleton rows={4} cols={4} />
               ) : servers.length === 0 ? (
                 <TableRow className='hover:bg-transparent'>
                   <TableCell

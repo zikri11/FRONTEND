@@ -20,6 +20,11 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { outerBoxClass } from '@/lib/nested-box'
+import { getPublicApiBaseUrl } from '@/lib/socket-url'
+
+// Alamat yang dipanggil mesin kasir dari luar. Diambil dari env supaya tak
+// pernah basi saat domain backend berganti — sama seperti axios & socket.
+const API_BASE_URL = getPublicApiBaseUrl()
 
 // Komponen CodeBlock sederhana pengganti kibo-ui karena kodenya belum tersedia
 function SimpleCodeBlock({ language, filename, code }: { language: string, filename?: string, code: string }) {
@@ -87,13 +92,13 @@ export function Docs() {
             API Gateway URL
           </h2>
           <p className="leading-7 [&:not(:first-child)]:mt-6">
-            Semua endpoint POS diawali dengan base URL berikut. Ganti host/port sesuai server produksi kamu saat deploy.
+            Semua endpoint POS diawali dengan base URL berikut, mengikuti backend yang sedang dipakai panel ini.
           </p>
 
-          <SimpleCodeBlock 
+          <SimpleCodeBlock
             language="bash"
             filename="Base URL"
-            code="http://localhost:4100/api"
+            code={API_BASE_URL}
           />
 
           <h2 className="scroll-m-20 border-b pb-2 text-xl font-semibold tracking-tight first:mt-0 mt-10 mb-4">
@@ -187,7 +192,7 @@ export function Docs() {
           <SimpleCodeBlock 
             language="bash"
             filename="cURL"
-            code={`curl http://localhost:4100/api/pos/v1/profiles \\
+            code={`curl ${API_BASE_URL}/pos/v1/profiles \\
   -H "x-api-key: pos_xxxxxxxx..."`}
           />
 
@@ -401,7 +406,7 @@ export function Docs() {
           <SimpleCodeBlock 
             language="bash"
             filename="cURL"
-            code={`curl -X POST http://localhost:4100/api/pos/v1/trigger-voucher \\
+            code={`curl -X POST ${API_BASE_URL}/pos/v1/trigger-voucher \\
   -H "x-api-key: pos_xxxxxxxx..." \\
   -H "Content-Type: application/json" \\
   -d '{

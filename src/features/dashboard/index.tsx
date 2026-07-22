@@ -161,29 +161,40 @@ export function Dashboard() {
 
   // Jumlah voucher: dipisah dari fetchDashboardMetrics, selalu aktif tak
   // terikat status WS.
+  //
+  // Owner tidak punya pemilih router, jadi kartunya harus mencakup SELURUH
+  // outlet miliknya — cukup jangan kirim `serverId`, karena backend sudah
+  // membatasi /vouchers ke router milik owner lewat serverScopeWhere. Teknisi
+  // tetap per router yang sedang dipilih.
+  // Dipakai langsung sebagai bagian queryKey — React Query mem-hash berdasar
+  // nilai, jadi identitas objek yang baru tiap render tidak jadi masalah.
+  const voucherScope = isOwner ? {} : { serverId: activeServerId }
+  // Owner tak menunggu router terpilih; teknisi tetap menunggu.
+  const voucherQueryEnabled = !isSuperAdmin && (isOwner || !!activeServerId)
+
   const { data: vouchers = 0 } = useQuery({
-    queryKey: ['dashboard-vouchers-count', activeServerId ?? 'none'],
+    queryKey: ['dashboard-vouchers-count', voucherScope],
     queryFn: ({ signal }) =>
       api
         .get('/vouchers', {
-          params: { serverId: activeServerId, take: 1 },
+          params: { ...voucherScope, take: 1 },
           signal,
         })
         .then((r) => r.data?.meta?.total || 0),
-    enabled: !!activeServerId && !isSuperAdmin,
+    enabled: voucherQueryEnabled,
     refetchInterval: 3000,
   })
 
   const { data: usedVouchers = 0 } = useQuery({
-    queryKey: ['dashboard-used-vouchers-count', activeServerId ?? 'none'],
+    queryKey: ['dashboard-used-vouchers-count', voucherScope],
     queryFn: ({ signal }) =>
       api
         .get('/vouchers', {
-          params: { serverId: activeServerId, status: 'USED', take: 1 },
+          params: { ...voucherScope, status: 'USED', take: 1 },
           signal,
         })
         .then((r) => r.data?.meta?.total || 0),
-    enabled: !!activeServerId && !isSuperAdmin,
+    enabled: voucherQueryEnabled,
     refetchInterval: 3000,
   })
 
@@ -504,7 +515,9 @@ export function Dashboard() {
                           {vouchers}
                         </div>
                         <p className='text-xs text-muted-foreground'>
-                          total voucher dalam sistem
+                          {isOwner
+                            ? 'total voucher seluruh outlet'
+                            : 'total voucher pada router ini'}
                         </p>
                       </CardContent>
                     </Card>
@@ -534,7 +547,9 @@ export function Dashboard() {
                           {usedVouchers}
                         </div>
                         <p className='text-xs text-muted-foreground'>
-                          voucher yang sudah digunakan
+                          {isOwner
+                            ? 'sudah digunakan di seluruh outlet'
+                            : 'voucher yang sudah digunakan'}
                         </p>
                       </CardContent>
                     </Card>

@@ -7,10 +7,9 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Progress } from "@/components/ui/progress"
 import { Badge } from '@/components/reui/badge'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
-import { parseMikrotikTime, formatToReadableTime } from '@/lib/mikrotik-time'
+import { formatToReadableTime } from '@/lib/mikrotik-time'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { ArrowDown, ArrowUp, Users } from 'lucide-react'
 // Interfaces
@@ -84,7 +83,7 @@ export function ActiveUsersFeature() {
                         Pemakaian Data
                       </TableHead>
                       <TableHead className='text-xs font-medium tracking-wide text-muted-foreground'>
-                        Durasi / Sisa Waktu
+                        Lama Terhubung
                       </TableHead>
                       <TableHead className='text-xs font-medium tracking-wide text-muted-foreground text-center'>
                         Status
@@ -94,17 +93,17 @@ export function ActiveUsersFeature() {
                   <TableBody>
                     {!activeServerId ? (
                       <TableRow>
-                        <TableCell colSpan={6} className='h-24 text-center'>
+                        <TableCell colSpan={5} className='h-24 text-center'>
                           <div className='flex flex-col items-center justify-center text-text-secondary'>
                             <p className='text-sm font-medium'>Silakan pilih router terlebih dahulu di menu atas.</p>
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : isLoadingUsers || isLoadingServers ? (
-                      <TableSkeleton rows={5} cols={6} />
+                      <TableSkeleton rows={5} cols={5} />
                     ) : isError ? (
                       <TableRow>
-                        <TableCell colSpan={6} className='h-24 text-center'>
+                        <TableCell colSpan={5} className='h-24 text-center'>
                           <div className='flex flex-col items-center justify-center text-error'>
                             <p className='text-sm font-medium'>Gagal memuat data dari router.</p>
                             <p className='text-xs opacity-80'>Pastikan koneksi router stabil.</p>
@@ -113,7 +112,7 @@ export function ActiveUsersFeature() {
                       </TableRow>
                     ) : activeUsersData && activeUsersData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className='h-24 text-center'>
+                        <TableCell colSpan={5} className='h-24 text-center'>
                           <div className='flex flex-col items-center justify-center text-text-secondary'>
                             <p className='text-sm font-medium'>Tidak ada pengguna aktif saat ini.</p>
                           </div>
@@ -146,39 +145,11 @@ export function ActiveUsersFeature() {
                             </div>
                           </TableCell>
                           
-                          <TableCell className='w-[180px]'>
-                            {(() => {
-                              const uptimeSec = parseMikrotikTime(user.uptime)
-                              const timeLeftSec = parseMikrotikTime(user.sessionTimeLeft)
-                              const totalSec = uptimeSec + timeLeftSec
-                              
-                              if (totalSec === 0 || !user.sessionTimeLeft) {
-                                // Unlimited atau tidak ada batas waktu
-                                return (
-                                  <div className='flex flex-col'>
-                                    <span className='font-mono text-xs text-foreground'>
-                                      {formatToReadableTime(user.uptime)}
-                                    </span>
-                                    <span className='text-[11px] text-muted-foreground'>Tak terbatas</span>
-                                  </div>
-                                )
-                              }
-
-                              const percentUsed = Math.round((uptimeSec / totalSec) * 100)
-                              return (
-                                <div className="flex flex-col gap-1.5 w-full">
-                                  <Progress value={percentUsed} className="h-2 w-full" />
-                                  <div className="flex flex-col gap-0.5 mt-0.5">
-                                    <span className="text-[11px] font-medium text-muted-foreground">
-                                      {percentUsed}% Terpakai
-                                    </span>
-                                    <span className="font-mono text-[11px] font-medium text-foreground">
-                                      {formatToReadableTime(user.sessionTimeLeft)} Tersisa
-                                    </span>
-                                  </div>
-                                </div>
-                              )
-                            })()}
+                          {/* Lama sesi berjalan (RouterOS `uptime`). Sisa waktu sesi
+                              sengaja tidak ditampilkan — hanya ada bila profil hotspot
+                              punya batas waktu, jadi kolomnya kosong untuk mayoritas user. */}
+                          <TableCell className='font-mono text-xs text-foreground tabular-nums whitespace-nowrap'>
+                            {formatToReadableTime(user.uptime)}
                           </TableCell>
                           
                           <TableCell className='text-center'>

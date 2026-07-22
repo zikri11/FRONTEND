@@ -30,7 +30,6 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { RouterLoadingOverlay } from '@/components/router-loading-overlay'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { Analytics } from './components/analytics'
 import { ChatBubble } from './components/chat-bubble'
 import { OutletStatusOverview } from './components/outlet-status-overview'
 import { PosTransactionsChart } from './components/pos-transactions-chart'
@@ -345,22 +344,13 @@ export function Dashboard() {
                 className='space-y-4'
               >
                 <div className='w-full overflow-x-auto pb-2'>
-                  <TabsList>
-                    <TabsTrigger value='overview'>Overview</TabsTrigger>
-                    <TabsTrigger value='analytics'>
-                      {!isSuperAdmin ? 'Monitoring' : 'Analytics'}
-                    </TabsTrigger>
-                    {isSuperAdmin && (
-                      <>
-                        <TabsTrigger value='reports' disabled>
-                          Reports
-                        </TabsTrigger>
-                        <TabsTrigger value='notifications' disabled>
-                          Notifications
-                        </TabsTrigger>
-                      </>
-                    )}
-                  </TabsList>
+                  {/* SUPER_ADMIN hanya punya Overview → tab bar disembunyikan */}
+                  {!isSuperAdmin && (
+                    <TabsList>
+                      <TabsTrigger value='overview'>Overview</TabsTrigger>
+                      <TabsTrigger value='analytics'>Monitoring</TabsTrigger>
+                    </TabsList>
+                  )}
                 </div>
                 <TabsContent value='overview' className='relative space-y-4'>
                   <RouterLoadingOverlay show={dashboardIsLoading} />
@@ -601,9 +591,11 @@ export function Dashboard() {
                     </div>
                   )}
                 </TabsContent>
-                <TabsContent value='analytics' className='space-y-4'>
-                  {!isSuperAdmin ? <OutletStatusOverview /> : <Analytics />}
-                </TabsContent>
+                {!isSuperAdmin && (
+                  <TabsContent value='analytics' className='space-y-4'>
+                    <OutletStatusOverview />
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           </>

@@ -7,8 +7,10 @@ import {
   ChevronLeft,
   ChevronRight,
   History,
+  Loader2,
 } from 'lucide-react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Badge } from '@/components/reui/badge'
 import { IconStack } from '@/components/reui/icon-stack'
 import { Button } from '@/components/ui/button'
@@ -65,6 +67,7 @@ type ActivityLog = {
   entity?: string
   detail?: string
   server?: { name?: string }
+  user?: { name?: string; email?: string }
 }
 
 type ActivityResponse = {
@@ -74,6 +77,15 @@ type ActivityResponse = {
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
+// Batas baris sekali ekspor. Backend tak membatasi `take`, jadi batasnya
+// ditetapkan di sini supaya satu klik tak menarik ratusan ribu baris ke memori
+// browser. Bila total melebihi ini, user diberi tahu bahwa hasilnya dipotong.
+const EXPORT_MAX_ROWS = 5000
+
+// U+FEFF di awal file. Tanpa ini Excel di Windows membaca CSV sebagai ANSI dan
+// karakter non-ASCII (nama outlet, tanda '–') jadi rusak.
+const UTF8_BOM = String.fromCharCode(0xfeff)
+
 // Truncation berbasis JUMLAH KATA (bukan CSS ellipsis / lebar elemen): >5 kata
 // → 5 kata pertama + '...'. Presentation only; teks penuh tetap ada (tooltip).
 function truncateWords(text: string, max = 5) {
@@ -82,12 +94,51 @@ function truncateWords(text: string, max = 5) {
   return { text: `${words.slice(0, max).join(' ')}...`, truncated: true }
 }
 
+// Escape RFC 4180: selalu dikutip, kutip ganda di dalam digandakan. Nilai
+// diawali =/+/-/@ diberi prefix "'" supaya Excel tak mengeksekusinya sebagai
+// formula (CSV injection).
+function csvCell(value: unknown): string {
+  const raw = value == null ? '' : String(value)
+  const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
+function buildCsv(logs: ActivityLog[]): string {
+  const headers = [
+    'Waktu',
+    'Aksi',
+    'Entitas',
+    'Deskripsi',
+    'Router',
+    'Pengguna',
+    'ID Log',
+  ]
+  const rows = logs.map((log) =>
+    [
+      new Date(log.createdAt).toLocaleString('id-ID'),
+      log.action ?? '',
+      log.entity ?? '',
+      log.detail ?? '',
+      log.server?.name ?? '',
+      log.user?.name || log.user?.email || '',
+      log.id,
+    ].map(csvCell),
+  )
+  // CRLF + BOM: Excel di Windows butuh keduanya agar baris & karakter non-ASCII
+  // (mis. nama outlet) tidak berantakan.
+  const body = [headers.map(csvCell), ...rows]
+    .map((r) => r.join(','))
+    .join('\r\n')
+  return UTF8_BOM + body
+}
+
 export function ActivityHistory() {
   const { activeServerId, isLoading } = useServerStore()
   const [detailLog, setDetailLog] = useState<ActivityLog | null>(null)
   const [copied, setCopied] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Reset ke halaman 1 saat router aktif berganti — pola "adjust state during
   // render" (bukan useEffect) agar tak kena react-hooks/set-state-in-effect.
@@ -105,14 +156,65 @@ export function ActivityHistory() {
     setTimeout(() => setCopied(false), 1500)
   }
 
-  const downloadJson = () => {
-    const blob = new Blob([detailJson], { type: 'application/json' })
+  const downloadFile = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `activity-${detailLog?.id ?? 'log'}.json`
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const downloadJson = () => {
+    downloadFile(
+      detailJson,
+      `activity-${detailLog?.id ?? 'log'}.json`,
+      'application/json',
+    )
+  }
+
+  // Ekspor mengambil ulang data dari backend (bukan memakai `activityLogs`)
+  // supaya isinya seluruh riwayat router aktif, bukan hanya baris di halaman
+  // yang sedang dilihat.
+  const exportLogs = async () => {
+    if (!activeServerId || isExporting) return
+    setIsExporting(true)
+    try {
+      const res = await api.get('/activity-log', {
+        params: { serverId: activeServerId, skip: 0, take: EXPORT_MAX_ROWS },
+      })
+      const payload = res.data as ActivityResponse
+      const logs = payload.data ?? []
+
+      if (logs.length === 0) {
+        toast.info('Tidak ada riwayat aktivitas untuk diekspor.')
+        return
+      }
+
+      const stamp = new Date()
+        .toISOString()
+        .slice(0, 16)
+        .replace(/[:T]/g, '-')
+      downloadFile(
+        buildCsv(logs),
+        `riwayat-aktivitas-${stamp}.csv`,
+        'text/csv;charset=utf-8',
+      )
+
+      const grandTotal = payload.meta?.total ?? logs.length
+      if (grandTotal > logs.length) {
+        toast.warning(
+          `${logs.length} dari ${grandTotal} aktivitas diekspor (batas ${EXPORT_MAX_ROWS} baris per ekspor).`,
+        )
+      } else {
+        toast.success(`${logs.length} aktivitas diekspor ke CSV.`)
+      }
+    } catch {
+      toast.error('Gagal mengekspor log. Coba lagi.')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   // Live activity feed — polled every 3s to meet the <5s freshness SLA. This
@@ -161,7 +263,18 @@ export function ActivityHistory() {
                   Pantau log aktivitas sistem, audit transaksi POS, & status sinkronisasi router MikroTik.
                 </p>
               </div>
-          <Button variant='outline'>Ekspor Log</Button>
+          <Button
+            variant='outline'
+            onClick={exportLogs}
+            disabled={isExporting || total === 0}
+          >
+            {isExporting ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <Download className='h-4 w-4' />
+            )}
+            {isExporting ? 'Mengekspor…' : 'Ekspor Log'}
+          </Button>
         </div>
 
         <div className={`overflow-hidden rounded-xl border ${nestedCardClass}`}>

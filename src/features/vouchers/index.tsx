@@ -97,6 +97,10 @@ type Voucher = {
   password?: string
   profile?: { name?: string }
   paket?: string
+  // Nama router asal — dikirim backend lewat include `server: {name}`.
+  // Inilah identitas outlet yang sebenarnya; `outletName` di bawah cuma
+  // teks bebas yang diketik saat generate dan kerap kosong.
+  server?: { name?: string }
   outletName?: string
   outlet?: string
   status?: string
@@ -122,6 +126,23 @@ export function Vouchers() {
   const [debouncedSearch, setDebouncedSearch] = React.useState('')
   const [profileFilter, setProfileFilter] = React.useState('all')
   const [statusFilter, setStatusFilter] = React.useState('all')
+  // Khusus owner: 'all' = seluruh outlet miliknya. Teknisi tak memakai state
+  // ini karena sudah terikat router terpilih lewat TeamSwitcher.
+  const [outletFilter, setOutletFilter] = React.useState('all')
+
+  // Router yang menjadi acuan query. Owner tidak punya pemilih router di
+  // sidebar (app-sidebar.tsx: hanya TEKNISI), jadi mengikuti `activeServerId`
+  // berarti diam-diam menampilkan satu outlet saja. Owner memakai filter
+  // Outlet; backend sudah membatasi /vouchers ke router miliknya sendiri.
+  const scopedServerId = isOwner
+    ? outletFilter === 'all'
+      ? undefined
+      : outletFilter
+    : (activeServerId ?? undefined)
+  // Profil terikat satu router, dan backend hanya menerima satu `profileId`.
+  // Saat owner melihat semua outlet tak ada satu pun router acuan → filter
+  // profil dimatikan alih-alih memberi hasil yang diam-diam kurang.
+  const profileFilterEnabled = !!scopedServerId
 
   // Pagination & Action States
   const [currentPage, setCurrentPage] = React.useState(1)
@@ -147,7 +168,7 @@ export function Vouchers() {
     data: Voucher[]
     meta: { total: number; skip: number; take: number }
   }>({
-    queryKey: qk.vouchers(activeServerId ?? 'none', {
+    queryKey: qk.vouchers(scopedServerId ?? 'owner-all', {
       search: debouncedSearch || undefined,
       profileId: profileFilter === 'all' ? undefined : profileFilter,
       status: statusFilter === 'all' ? undefined : statusFilter,
@@ -158,7 +179,7 @@ export function Vouchers() {
       api
         .get('/vouchers', {
           params: {
-            serverId: activeServerId,
+            serverId: scopedServerId,
             search: debouncedSearch || undefined,
             profileId: profileFilter === 'all' ? undefined : profileFilter,
             status: statusFilter === 'all' ? undefined : statusFilter,
@@ -168,47 +189,48 @@ export function Vouchers() {
           signal,
         })
         .then((res) => res.data),
-    enabled: !!activeServerId,
+    enabled: isOwner || !!activeServerId,
     placeholderData: keepPreviousData,
   })
 
   const { data: profiles = [] } = useQuery<{ id: string; name: string }[]>({
-    queryKey: qk.profiles(activeServerId ?? 'none'),
+    queryKey: qk.profiles(scopedServerId ?? 'none'),
     queryFn: ({ signal }) =>
       api
-        .get('/profiles', { params: { serverId: activeServerId }, signal })
+        .get('/profiles', { params: { serverId: scopedServerId }, signal })
         .then((res) => res.data),
-    enabled: !!activeServerId,
+    enabled: profileFilterEnabled,
   })
 
-  // Total per-status (scoped ke seluruh router, independen dari pagination/filter halaman aktif)
+  // Total per-status — mengikuti cakupan yang sama dengan daftar (seluruh
+  // outlet owner, atau satu outlet bila difilter), independen dari paginasi.
   const { data: unusedVouchers = 0 } = useQuery({
-    queryKey: qk.vouchers(activeServerId ?? 'none', {
+    queryKey: qk.vouchers(scopedServerId ?? 'owner-all', {
       status: 'UNUSED',
       take: 1,
     }),
     queryFn: ({ signal }) =>
       api
         .get('/vouchers', {
-          params: { serverId: activeServerId, status: 'UNUSED', take: 1 },
+          params: { serverId: scopedServerId, status: 'UNUSED', take: 1 },
           signal,
         })
         .then((res) => res.data.meta.total as number),
-    enabled: !!activeServerId,
+    enabled: isOwner || !!activeServerId,
   })
   const { data: usedVouchers = 0 } = useQuery({
-    queryKey: qk.vouchers(activeServerId ?? 'none', {
+    queryKey: qk.vouchers(scopedServerId ?? 'owner-all', {
       status: 'USED',
       take: 1,
     }),
     queryFn: ({ signal }) =>
       api
         .get('/vouchers', {
-          params: { serverId: activeServerId, status: 'USED', take: 1 },
+          params: { serverId: scopedServerId, status: 'USED', take: 1 },
           signal,
         })
         .then((res) => res.data.meta.total as number),
-    enabled: !!activeServerId,
+    enabled: isOwner || !!activeServerId,
   })
 
   // Action States
@@ -343,8 +365,9 @@ export function Vouchers() {
                     Voucher Hotspot
                   </h2>
                   <p className='mt-1 text-sm text-muted-foreground'>
-                    Buat voucher instan & massal di{' '}
-                    {activeServer?.name || activeServer?.host || 'router ini'}.
+                    {isOwner
+                      ? 'Voucher hotspot dari seluruh outlet Anda.'
+                      : `Buat voucher instan & massal di ${activeServer?.name || activeServer?.host || 'router ini'}.`}
                   </p>
                 </div>
                 {!isOwner && (
@@ -422,7 +445,9 @@ export function Vouchers() {
                           {totalVouchers}
                         </div>
                         <p className='text-xs text-muted-foreground'>
-                          Total di router ini
+                          {isOwner && outletFilter === 'all'
+                            ? 'Total di seluruh outlet'
+                            : 'Total di outlet ini'}
                         </p>
                       </CardContent>
                     </Card>
@@ -478,16 +503,47 @@ export function Vouchers() {
                         onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
-                    <div className='flex w-full gap-2 sm:w-auto'>
+                    <div className='flex w-full flex-wrap gap-2 sm:w-auto'>
+                      {isOwner && (
+                        <Select
+                          value={outletFilter}
+                          onValueChange={(v) => {
+                            setOutletFilter(v)
+                            // Profil milik router lain — kalau tak direset,
+                            // id lama ikut terkirim dan hasilnya kosong.
+                            setProfileFilter('all')
+                            setCurrentPage(1)
+                          }}
+                        >
+                          <SelectTrigger className='w-full sm:w-[200px]'>
+                            <SelectValue placeholder='Filter Outlet' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value='all'>Semua Outlet</SelectItem>
+                            {servers.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <Select
                         value={profileFilter}
                         onValueChange={(v) => {
                           setProfileFilter(v)
                           setCurrentPage(1)
                         }}
+                        disabled={!profileFilterEnabled}
                       >
                         <SelectTrigger className='w-full sm:w-[180px]'>
-                          <SelectValue placeholder='Filter Profil' />
+                          {/* Saat nonaktif, nilai 'all' akan tampil sebagai
+                              "Semua Profil" dan menyesatkan — timpa teksnya. */}
+                          {profileFilterEnabled ? (
+                            <SelectValue placeholder='Filter Profil' />
+                          ) : (
+                            <SelectValue>Pilih outlet dulu</SelectValue>
+                          )}
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value='all'>Semua Profil</SelectItem>
@@ -661,8 +717,17 @@ export function Vouchers() {
                               <TableCell className='text-sm text-foreground'>
                                 {row.profile?.name || row.paket || '-'}
                               </TableCell>
-                              <TableCell className='text-sm text-muted-foreground'>
-                                {row.outletName || row.outlet || '-'}
+                              <TableCell>
+                                <div className='flex flex-col gap-0.5'>
+                                  <span className='text-sm text-foreground'>
+                                    {row.server?.name || '—'}
+                                  </span>
+                                  {(row.outletName || row.outlet) && (
+                                    <span className='text-xs text-muted-foreground'>
+                                      {row.outletName || row.outlet}
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 {row.status === 'UNUSED' ||
@@ -802,7 +867,9 @@ export function Vouchers() {
                     <CardHeader className='items-center pb-0'>
                       <CardTitle>Rasio Pemakaian Voucher</CardTitle>
                       <CardDescription>
-                        Seluruh voucher pada router aktif
+                        {isOwner && outletFilter === 'all'
+                          ? 'Seluruh voucher dari semua outlet'
+                          : 'Seluruh voucher pada outlet ini'}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className='mt-4 flex-1 pb-0'>

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Server, Wifi, Key } from 'lucide-react'
+import { ArrowLeft, Server, Wifi, Key, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Card,
   CardContent,
@@ -25,8 +25,18 @@ import {
   FieldGroup,
   FieldError,
 } from '@/components/ui/field'
+import { AxiosError } from 'axios'
 import { api } from '@/lib/axios'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
+
+// Pola sama dengan form voucher: pesan dari backend bisa berupa string atau
+// array (validasi class-validator).
+function errorMessage(error: unknown, fallback: string) {
+  const msg =
+    error instanceof AxiosError ? error.response?.data?.message : undefined
+  if (Array.isArray(msg)) return msg.join(', ')
+  return typeof msg === 'string' ? msg : fallback
+}
 
 export function RegisterRouter() {
   const router = useRouter()
@@ -34,7 +44,6 @@ export function RegisterRouter() {
     routerName: '',
     host: '',
     port: '8728',
-    useSsl: false,
     username: '',
     password: '',
     hotspotName: '',
@@ -45,15 +54,8 @@ export function RegisterRouter() {
   const [testResult, setTestResult] = useState<{ status: 'success' | 'error', message: string } | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const handleChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => {
-      const updated = { ...prev, [field]: value }
-      // Auto-toggle port default based on SSL checkbox
-      if (field === 'useSsl') {
-        updated.port = value ? '8729' : '8728'
-      }
-      return updated
-    })
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => {
         const next = { ...prev }
@@ -90,9 +92,8 @@ export function RegisterRouter() {
         port: Number(formData.port),
         username: formData.username,
         password: formData.password,
-        useSSL: formData.useSsl,
       })
-      
+
       if (response.data?.success) {
         toast.success(response.data.message || 'Koneksi berhasil! Router MikroTik merespons dengan baik.')
         setTestResult({ status: 'success', message: 'Koneksi Berhasil' })
@@ -100,8 +101,13 @@ export function RegisterRouter() {
         toast.error(response.data?.error || 'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.')
         setTestResult({ status: 'error', message: 'Koneksi Gagal' })
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.')
+    } catch (error) {
+      toast.error(
+        errorMessage(
+          error,
+          'Gagal terhubung ke router. Periksa IP, Port, dan Kredensial.'
+        )
+      )
       setTestResult({ status: 'error', message: 'Koneksi Gagal' })
     } finally {
       setIsTesting(false)
@@ -125,15 +131,14 @@ export function RegisterRouter() {
         port: Number(formData.port),
         username: formData.username,
         password: formData.password,
-        useSSL: formData.useSsl,
         hotspotName: formData.hotspotName || undefined,
         dnsName: formData.dnsName || undefined,
       })
       
       toast.success('Router berhasil didaftarkan ke sistem!')
       router.navigate({ to: '/servers' })
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mendaftarkan router.')
+    } catch (error) {
+      toast.error(errorMessage(error, 'Gagal mendaftarkan router.'))
     } finally {
       setIsSubmitting(false)
     }
@@ -198,7 +203,7 @@ export function RegisterRouter() {
                 <Field className='col-span-1'>
                   <FieldLabel>Host IP / Domain <span className='text-destructive'>*</span></FieldLabel>
                   <Input
-                    placeholder='contoh: 192.168.1.1 atau router.mydomain.com'
+                    placeholder='contoh: 103.24.56.78 atau id-30.hostddns.us'
                     value={formData.host}
                     onChange={(e) => {
                       // Terima IPv4 maupun hostname/domain (huruf, angka,
@@ -211,7 +216,7 @@ export function RegisterRouter() {
                   {errors.host ? (
                     <FieldError>{errors.host}</FieldError>
                   ) : (
-                    <FieldDescription>IP Address publik/lokal atau nama domain router.</FieldDescription>
+                    <FieldDescription>IP publik atau alamat tunnel/DDNS router.</FieldDescription>
                   )}
                 </Field>
 
@@ -220,27 +225,54 @@ export function RegisterRouter() {
                   <FieldLabel>Port API <span className='text-destructive'>*</span></FieldLabel>
                   <Input
                     type='text'
-                    placeholder='default: 8728 (atau 8729 untuk SSL)'
+                    placeholder='default: 8728'
                     value={formData.port}
                     onChange={(e) => handleChange('port', e.target.value)}
                     aria-invalid={!!errors.port}
                   />
-                  {errors.port && <FieldError>{errors.port}</FieldError>}
-                  <div className='flex items-center space-x-2 mt-3.5'>
-                    <Checkbox
-                      id='useSsl'
-                      checked={formData.useSsl}
-                      onCheckedChange={(checked) => handleChange('useSsl', !!checked)}
-                    />
-                    <label
-                      htmlFor='useSsl'
-                      className='text-xs text-muted-foreground font-medium cursor-pointer select-none'
-                    >
-                      Gunakan SSL untuk koneksi aman (port default berubah ke 8729)
-                    </label>
-                  </div>
+                  {errors.port ? (
+                    <FieldError>{errors.port}</FieldError>
+                  ) : (
+                    <FieldDescription>
+                      Port API MikroTik. Bawaannya 8728.
+                    </FieldDescription>
+                  )}
                 </Field>
               </FieldGroup>
+
+              {/* Penyebab kegagalan paling sering: alamat lokal yang cuma bisa
+                  dijangkau dari dalam outlet. Ditaruh tepat setelah Host & Port
+                  — dua kolom yang dibicarakannya.
+                  Aksen warna dari token semantic `info`, permukaan tetap datar
+                  dengan hairline 1px, bukan panel berwarna tebal. */}
+              <Alert className='border-info/20 bg-info/10'>
+                <Globe className='text-info' />
+                {/* line-clamp-none: bawaan AlertTitle memotong 1 baris, judul
+                    ini terpotong di layar sempit. tracking-normal: 14/500
+                    adalah Label, tracking negatif hanya untuk heading. */}
+                <AlertTitle className='line-clamp-none tracking-normal text-foreground'>
+                  Router harus bisa dihubungi dari internet
+                </AlertTitle>
+                {/* Body 14/400 pakai tangga tingkat-2 (secondary), bukan muted —
+                    muted #8f8f8f gagal AA untuk teks kecil di light mode. */}
+                <AlertDescription className='text-text-secondary'>
+                  <p>
+                    Sistem menghubungi router dari server kami, bukan dari
+                    jaringan outlet. Alamat lokal seperti{' '}
+                    <code className='font-mono text-sm'>192.168.x.x</code> tidak
+                    akan terjangkau.
+                  </p>
+                  <p>
+                    Pakai IP publik dengan port API yang sudah diteruskan, atau
+                    layanan tunnel/DDNS bila outlet memakai IP dinamis. Belum
+                    yakin? Isi dulu, lalu tekan{' '}
+                    <span className='font-medium text-foreground'>
+                      Uji Koneksi Router
+                    </span>{' '}
+                    di bawah sebelum menyimpan.
+                  </p>
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
 

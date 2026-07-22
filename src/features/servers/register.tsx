@@ -201,7 +201,9 @@ export function RegisterRouter() {
                     placeholder='contoh: 192.168.1.1 atau router.mydomain.com'
                     value={formData.host}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '')
+                      // Terima IPv4 maupun hostname/domain (huruf, angka,
+                      // titik, tanda hubung) — mis. id-30.hostddns.us
+                      const value = e.target.value.replace(/[^a-zA-Z0-9.-]/g, '')
                       handleChange('host', value)
                     }}
                     aria-invalid={!!errors.host}

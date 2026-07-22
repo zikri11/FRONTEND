@@ -9,6 +9,7 @@ import {
   TelescopeIcon, 
   GlobeIcon, 
   PaperclipIcon, 
+  Lightbulb,
   MessageSquareIcon,
   Trash2Icon,
   Maximize2Icon
@@ -347,11 +348,16 @@ export function ChatBubble() {
                     )}
                   </div>
                 </div>
-                <div className='rounded-lg bg-primary/5 p-2.5 border border-primary/20 text-[11px] text-muted-foreground leading-relaxed shadow-sm'>
-                  <p className='font-semibold text-primary mb-1 flex items-center gap-1'>
-                    <span>💡</span> Tips AI
+                <div className='rounded-lg bg-info/10 p-3 ring-1 ring-inset ring-info/20 text-xs text-muted-foreground leading-relaxed'>
+                  <p className='mb-1.5 flex items-center gap-1.5 text-xs font-medium text-info'>
+                    <Lightbulb className='size-3.5' aria-hidden='true' />
+                    Tips AI
                   </p>
-                  Ketik <strong className="text-foreground">@</strong> untuk memilih router spesifik yang ingin dianalisis (contoh: <em className="text-foreground">@RouterCafeA kenapa sering putus?</em>).
+                  Ketik <code className='font-mono text-foreground'>@</code> untuk
+                  memilih router spesifik yang ingin dianalisis. Contoh:{' '}
+                  <code className='font-mono text-foreground'>
+                    @RouterCafeA kenapa sering putus?
+                  </code>
                 </div>
               </div>
 

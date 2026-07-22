@@ -295,7 +295,7 @@ export function Vouchers() {
   })
 
   const handlePrintSingle = (id: string) => {
-    const baseUrl = api.defaults.baseURL || 'http://localhost:3000/api'
+    const baseUrl = api.defaults.baseURL || '/api'
     window.open(`${baseUrl}/vouchers/pdf/single/${id}`, '_blank')
   }
 
@@ -303,7 +303,7 @@ export function Vouchers() {
   // Endpoint publik (tanpa JWT) → cukup window.open.
   const handlePrintFiltered = () => {
     if (!activeServerId) return
-    const baseUrl = api.defaults.baseURL || 'http://localhost:3000/api'
+    const baseUrl = api.defaults.baseURL || '/api'
     const params = new URLSearchParams({ serverId: activeServerId })
     if (profileFilter !== 'all') params.set('profileId', profileFilter)
     if (statusFilter !== 'all') params.set('status', statusFilter)

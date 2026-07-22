@@ -475,7 +475,7 @@ export function RouterDetail({ routerId }: { routerId: string }) {
   })
 
   const printSingleVoucher = (id: string) => {
-    const baseUrl = api.defaults.baseURL || 'http://localhost:4000/api'
+    const baseUrl = api.defaults.baseURL || '/api'
     window.open(`${baseUrl}/vouchers/pdf/single/${id}`, '_blank')
   }
 

@@ -222,16 +222,20 @@ export function Vouchers() {
   const vouchers = vouchersResponse.data
   const totalVouchers = vouchersResponse.meta.total
 
+  // Warna dipakai LANGSUNG lewat var(), bukan `hsl(var(--x))`: token tema
+  // proyek ini sudah berupa warna utuh (oklch/hex), jadi membungkusnya dengan
+  // hsl() menghasilkan warna invalid dan SVG jatuh ke hitam.
+  // Palet mengikuti badge status di tabel: Aktif = success, Terpakai = muted.
   const dynamicPieData = [
     {
       name: 'Belum Dipakai',
       value: unusedVouchers,
-      fill: 'hsl(var(--primary))',
+      fill: 'var(--success)',
     },
     {
       name: 'Terpakai',
       value: usedVouchers,
-      fill: 'hsl(var(--muted-foreground))',
+      fill: 'var(--muted-foreground)',
     },
   ]
 
@@ -797,7 +801,9 @@ export function Vouchers() {
                   <Card className={`flex flex-col ${nestedCardClass}`}>
                     <CardHeader className='items-center pb-0'>
                       <CardTitle>Rasio Pemakaian Voucher</CardTitle>
-                      <CardDescription>Bulan Ini (Juni 2026)</CardDescription>
+                      <CardDescription>
+                        Seluruh voucher pada router aktif
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className='mt-4 flex-1 pb-0'>
                       <div className='mx-auto aspect-square max-h-[300px] pb-0'>
@@ -815,7 +821,11 @@ export function Vouchers() {
                               data={dynamicPieData}
                               dataKey='value'
                               nameKey='name'
-                              label
+                              stroke='var(--card)'
+                              label={{
+                                fill: 'var(--muted-foreground)',
+                                fontSize: 12,
+                              }}
                             />
                           </PieChart>
                         </ResponsiveContainer>

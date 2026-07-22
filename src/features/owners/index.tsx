@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, SearchIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, SearchIcon, Users } from 'lucide-react'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { qk } from '@/lib/query-keys'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
@@ -199,9 +200,14 @@ export function KelolaOwner() {
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={COLS}
-                          className='h-24 text-center text-sm text-muted-foreground'
+                          className='py-12 text-center text-sm text-muted-foreground'
                         >
-                          Tidak ada owner yang cocok.
+                          <div className='flex flex-col items-center gap-3'>
+                            <IconStack aria-hidden='true'>
+                              <Users className='size-5' />
+                            </IconStack>
+                            <span>Tidak ada owner yang cocok.</span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (

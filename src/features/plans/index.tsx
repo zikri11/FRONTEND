@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MoreHorizontalIcon, PlusIcon } from 'lucide-react'
+import { Layers, MoreHorizontalIcon, PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { qk } from '@/lib/query-keys'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -178,9 +179,14 @@ export function KelolaPlan() {
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={COLS}
-                          className='h-24 text-center text-sm text-muted-foreground'
+                          className='py-12 text-center text-sm text-muted-foreground'
                         >
-                          Belum ada paket.
+                          <div className='flex flex-col items-center gap-3'>
+                            <IconStack aria-hidden='true'>
+                              <Layers className='size-5' />
+                            </IconStack>
+                            <span>Belum ada paket.</span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (

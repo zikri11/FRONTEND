@@ -45,6 +45,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -217,11 +219,7 @@ export function Keys() {
                 </TableHeader>
                 <TableBody>
                   {isPending ? (
-                    <TableRow className='hover:bg-transparent'>
-                      <TableCell colSpan={6} className='h-24 text-center text-sm text-muted-foreground'>
-                        Memuat API key...
-                      </TableCell>
-                    </TableRow>
+                    <TableSkeleton rows={4} cols={6} />
                   ) : isError ? (
                     <TableRow className='hover:bg-transparent'>
                       <TableCell colSpan={6} className='h-24 text-center'>
@@ -233,8 +231,13 @@ export function Keys() {
                     </TableRow>
                   ) : keys.length === 0 ? (
                     <TableRow className='hover:bg-transparent'>
-                      <TableCell colSpan={6} className='h-24 text-center text-sm text-muted-foreground'>
-                        Belum ada API key untuk router ini.
+                      <TableCell colSpan={6} className='py-12 text-center text-sm text-muted-foreground'>
+                        <div className='flex flex-col items-center gap-3'>
+                          <IconStack aria-hidden='true'>
+                            <KeyRound className='size-5' />
+                          </IconStack>
+                          <span>Belum ada API key untuk router ini.</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

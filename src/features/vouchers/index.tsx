@@ -85,6 +85,7 @@ import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { RouterLoadingOverlay } from '@/components/router-loading-overlay'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -598,13 +599,20 @@ export function Vouchers() {
                           <TableRow className='hover:bg-transparent'>
                             <TableCell
                               colSpan={isOwner ? 6 : 7}
-                              className='h-24 text-center text-sm text-muted-foreground'
+                              className='py-12 text-center text-sm text-muted-foreground'
                             >
-                              {debouncedSearch ||
-                              profileFilter !== 'all' ||
-                              statusFilter !== 'all'
-                                ? 'Tidak ada voucher yang cocok.'
-                                : 'Belum ada voucher.'}
+                              <div className='flex flex-col items-center gap-3'>
+                                <IconStack aria-hidden='true'>
+                                  <TicketIcon className='size-5' />
+                                </IconStack>
+                                <span>
+                                  {debouncedSearch ||
+                                  profileFilter !== 'all' ||
+                                  statusFilter !== 'all'
+                                    ? 'Tidak ada voucher yang cocok.'
+                                    : 'Belum ada voucher.'}
+                                </span>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : (

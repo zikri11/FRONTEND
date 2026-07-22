@@ -40,6 +40,7 @@ import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { RouterLoadingOverlay } from '@/components/router-loading-overlay'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -207,9 +208,14 @@ export function Profiles() {
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={6}
-                          className='h-24 text-center text-sm text-muted-foreground'
+                          className='py-12 text-center text-sm text-muted-foreground'
                         >
-                          Belum ada profil hotspot.
+                          <div className='flex flex-col items-center gap-3'>
+                            <IconStack aria-hidden='true'>
+                              <Gauge className='size-5' />
+                            </IconStack>
+                            <span>Belum ada profil hotspot.</span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (

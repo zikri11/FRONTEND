@@ -6,9 +6,11 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  History,
 } from 'lucide-react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -197,8 +199,13 @@ export function ActivityHistory() {
                 </TableRow>
               ) : activityLogs.length === 0 ? (
                 <TableRow className='hover:bg-transparent'>
-                  <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                    Belum ada riwayat aktivitas.
+                  <TableCell colSpan={5} className="py-12 text-center text-sm text-muted-foreground">
+                    <div className='flex flex-col items-center gap-3'>
+                      <IconStack aria-hidden='true'>
+                        <History className='size-5' />
+                      </IconStack>
+                      <span>Belum ada riwayat aktivitas.</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

@@ -6,7 +6,9 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Card, CardContent } from '@/components/ui/card'
+import { ServerOff } from 'lucide-react'
 import { Badge } from '@/components/reui/badge'
+import { IconStack } from '@/components/reui/icon-stack'
 import { outerBoxClass, nestedCardClass } from '@/lib/nested-box'
 import { qk } from '@/lib/query-keys'
 import { availabilityLabel, fetchHealthSummary } from '@/lib/monitoring'
@@ -116,9 +118,14 @@ export function Monitoring() {
                     <TableRow className='hover:bg-transparent'>
                       <TableCell
                         colSpan={5}
-                        className='h-24 text-center text-sm text-muted-foreground'
+                        className='py-12 text-center text-sm text-muted-foreground'
                       >
-                        Belum ada outlet (router).
+                        <div className='flex flex-col items-center gap-3'>
+                          <IconStack aria-hidden='true'>
+                            <ServerOff className='size-5' />
+                          </IconStack>
+                          <span>Belum ada outlet (router).</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

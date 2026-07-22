@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreHorizontalIcon,
+  Router,
   SearchIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
+import { IconStack } from '@/components/reui/icon-stack'
 import {
   Dialog,
   DialogContent,
@@ -274,11 +276,18 @@ export function KelolaRouter() {
                       <TableRow className='hover:bg-transparent'>
                         <TableCell
                           colSpan={6}
-                          className='h-24 text-center text-sm text-muted-foreground'
+                          className='py-12 text-center text-sm text-muted-foreground'
                         >
-                          {servers.length === 0
-                            ? 'Belum ada router yang terdaftar.'
-                            : 'Tidak ada router yang cocok.'}
+                          <div className='flex flex-col items-center gap-3'>
+                            <IconStack aria-hidden='true'>
+                              <Router className='size-5' />
+                            </IconStack>
+                            <span>
+                              {servers.length === 0
+                                ? 'Belum ada router yang terdaftar.'
+                                : 'Tidak ada router yang cocok.'}
+                            </span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
